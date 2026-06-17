@@ -187,7 +187,7 @@ function CampaignsPage() {
     <div className="space-y-6">
       <PageHeader title="Campaigns" description="Create campaign messages and track BrewCo campaign history." />
 
-      <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(360px,460px)]">
+      <section className="grid gap-5 xl:grid-cols-[minmax(0,2fr)_minmax(320px,380px)]">
         <div className="space-y-4">
           {loading ? (
             <LoadingSkeleton rows={5} />
@@ -204,12 +204,12 @@ function CampaignsPage() {
               <div className="scroll-container overflow-x-hidden">
                 <table className="w-full table-fixed divide-y divide-brew-brown/10 text-sm">
                   <colgroup>
-                    <col className="w-[31%]" />
-                    <col className="w-[22%]" />
+                    <col className="w-[30%]" />
+                    <col className="w-[21%]" />
                     <col className="w-[11%]" />
                     <col className="w-[11%]" />
-                    <col className="w-[13%]" />
                     <col className="w-[12%]" />
+                    <col className="w-[15%]" />
                   </colgroup>
                   <thead className="bg-brew-cream text-left text-xs uppercase text-brew-roast">
                     <tr>
@@ -246,10 +246,10 @@ function CampaignsPage() {
                             <StatusBadge value={campaign.status} />
                           </td>
                           <td className="whitespace-nowrap px-3 py-4 text-brew-roast">{formatDate(campaign.created_at)}</td>
-                          <td className="px-3 py-4 text-right" onClick={(event) => event.stopPropagation()}>
+                          <td className="px-2 py-4 text-right" onClick={(event) => event.stopPropagation()}>
                             {isConfirmingDelete ? (
-                              <div className="ml-auto flex w-24 flex-col items-end gap-1 rounded-lg border border-red-200 bg-red-50 px-2 py-1.5">
-                                <span className="text-xs font-medium text-red-800">Delete?</span>
+                              <div className="ml-auto flex w-24 flex-col items-end gap-1 rounded-lg border border-red-200 bg-red-50 px-1.5 py-1.5 shadow-sm">
+                                <span className="w-full text-center text-[11px] font-semibold leading-none text-red-800">Delete?</span>
                                 <div className="flex items-center gap-1">
                                   <button
                                     type="button"
@@ -291,17 +291,17 @@ function CampaignsPage() {
         </div>
 
         <div className="space-y-5">
-          <form onSubmit={handleCreateCampaign} className="rounded-lg border border-brew-brown/10 bg-brew-foam p-5 shadow-sm">
+          <form onSubmit={handleCreateCampaign} className="rounded-lg border border-brew-brown/10 bg-brew-foam p-4 shadow-sm">
             <div className="flex items-center gap-2 text-base font-semibold text-brew-brown">
               <Send size={18} />
               Create Campaign
             </div>
-            <div className="mt-4 space-y-4">
+            <div className="mt-3 space-y-3">
               <Field label="Campaign Name">
                 <input
                   value={form.name}
                   onChange={(event) => updateForm("name", event.target.value)}
-                  className="h-11 w-full rounded-md border border-brew-brown/15 bg-white px-3 text-sm text-brew-brown outline-none transition focus:border-brew-amber focus:ring-2 focus:ring-brew-amber/20"
+                  className="h-10 w-full rounded-md border border-brew-brown/15 bg-white px-3 text-sm text-brew-brown outline-none transition focus:border-brew-amber focus:ring-2 focus:ring-brew-amber/20"
                   placeholder="Weekend espresso offer"
                 />
               </Field>
@@ -311,7 +311,7 @@ function CampaignsPage() {
                   value={form.segment_id}
                   onChange={(event) => updateForm("segment_id", event.target.value)}
                   disabled={segmentsLoading}
-                  className="h-11 w-full rounded-md border border-brew-brown/15 bg-white px-3 text-sm text-brew-brown outline-none transition focus:border-brew-amber focus:ring-2 focus:ring-brew-amber/20 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="h-10 w-full rounded-md border border-brew-brown/15 bg-white px-3 text-sm text-brew-brown outline-none transition focus:border-brew-amber focus:ring-2 focus:ring-brew-amber/20 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   <option value="">Select a segment</option>
                   {segments.map((segment) => (
@@ -334,7 +334,7 @@ function CampaignsPage() {
                 <select
                   value={form.channel}
                   onChange={(event) => updateForm("channel", event.target.value)}
-                  className="h-11 w-full rounded-md border border-brew-brown/15 bg-white px-3 text-sm text-brew-brown outline-none transition focus:border-brew-amber focus:ring-2 focus:ring-brew-amber/20"
+                  className="h-10 w-full rounded-md border border-brew-brown/15 bg-white px-3 text-sm text-brew-brown outline-none transition focus:border-brew-amber focus:ring-2 focus:ring-brew-amber/20"
                 >
                   <option value="email">Email</option>
                   <option value="sms">SMS</option>
@@ -346,7 +346,7 @@ function CampaignsPage() {
                 <textarea
                   value={form.message}
                   onChange={(event) => updateForm("message", event.target.value)}
-                  className="min-h-32 w-full rounded-md border border-brew-brown/15 bg-white px-3 py-2 text-sm text-brew-brown outline-none transition focus:border-brew-amber focus:ring-2 focus:ring-brew-amber/20"
+                  className="min-h-28 w-full rounded-md border border-brew-brown/15 bg-white px-3 py-2 text-sm text-brew-brown outline-none transition focus:border-brew-amber focus:ring-2 focus:ring-brew-amber/20"
                   placeholder="Write a campaign message or draft one with AI."
                 />
               </Field>
@@ -354,7 +354,7 @@ function CampaignsPage() {
               <button
                 type="submit"
                 disabled={creating}
-                className="inline-flex h-11 items-center justify-center rounded-md bg-brew-brown px-4 text-sm font-medium text-brew-foam transition hover:bg-brew-espresso disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex h-10 items-center justify-center rounded-md bg-brew-brown px-4 text-sm font-medium text-brew-foam transition hover:bg-brew-espresso disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {creating ? "Creating..." : "Create Campaign"}
               </button>

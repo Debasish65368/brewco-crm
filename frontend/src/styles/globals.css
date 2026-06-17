@@ -60,6 +60,24 @@
     box-shadow: 0 14px 32px rgba(45, 26, 18, 0.10);
   }
 
+  .scroll-container {
+    scrollbar-width: thin;
+    scrollbar-color: #c8852e transparent;
+  }
+
+  .scroll-container::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .scroll-container::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scroll-container::-webkit-scrollbar-thumb {
+    background: #c8852e;
+    border-radius: 4px;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .dashboard-enter {
       animation: none;

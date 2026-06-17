@@ -8,6 +8,7 @@ import {
   PackageCheck,
   ReceiptText,
   Send,
+  Star,
   TrendingUp,
   Users
 } from "lucide-react";
@@ -130,6 +131,16 @@ function HealthBadge({ value }) {
   );
 }
 
+function getInitials(name = "") {
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase();
+}
+
 function AnimatedMetricCard({ metric, index }) {
   const animatedValue = useCountUp(metric.rawValue, {
     formatter: metric.formatter || formatNumber
@@ -142,7 +153,7 @@ function AnimatedMetricCard({ metric, index }) {
   );
 }
 
-function SectionCard({ title, icon: Icon, children, className = "", delay = 0 }) {
+function SectionCard({ title, icon: Icon, children, className = "", bodyClassName = "", delay = 0 }) {
   return (
     <section
       className={`dashboard-enter dashboard-hover rounded-lg border border-brew-brown/10 bg-brew-foam p-5 shadow-sm ${className}`}
@@ -152,7 +163,7 @@ function SectionCard({ title, icon: Icon, children, className = "", delay = 0 })
         {Icon && <Icon className="h-5 w-5 text-brew-amber" />}
         <h2 className="text-base font-semibold text-brew-brown">{title}</h2>
       </div>
-      {children}
+      <div className={bodyClassName}>{children}</div>
     </section>
   );
 }
@@ -246,6 +257,9 @@ function DashboardPage() {
   const [revenueTrend, setRevenueTrend] = useState([]);
   const [revenueLoading, setRevenueLoading] = useState(true);
   const [revenueError, setRevenueError] = useState(null);
+  const [selectedTopCustomerId, setSelectedTopCustomerId] = useState(null);
+  const [selectedActivityId, setSelectedActivityId] = useState(null);
+  const [selectedReviewId, setSelectedReviewId] = useState(null);
 
   const fetchRevenueTrend = async () => {
     setRevenueLoading(true);
@@ -289,7 +303,44 @@ function DashboardPage() {
     };
   }, [cityChartData]);
 
-  const topCustomers = useMemo(() => [...customers].sort((a, b) => Number(b.total_spent || 0) - Number(a.total_spent || 0)).slice(0, 5), [customers]);
+  const topCustomers = useMemo(() => [...customers].sort((a, b) => Number(b.total_spent || 0) - Number(a.total_spent || 0)).slice(0, 10), [customers]);
+
+  const customerReviews = useMemo(() => {
+    const quotes = [
+      "Best coffee subscription I have tried. The deliveries are quick and the roast is always fresh.",
+      "BrewCo makes it easy to keep my pantry stocked. The flavor has been consistent every single order.",
+      "The recommendations are spot on, and the checkout experience feels effortless.",
+      "Reliable service, warm packaging, and coffee that tastes like it was packed the same morning.",
+      "Every blend feels thoughtfully chosen. It has become part of my morning routine.",
+      "The seasonal offers are genuinely useful, and the coffee arrives right when expected.",
+      "Great aroma, smooth roast, and customer support that actually feels personal.",
+      "The beans are consistently fresh, and the ordering experience is refreshingly simple.",
+      "I like how easy it is to discover new roasts without losing my usual favorites.",
+      "Fast delivery, rich flavor, and packaging that feels premium without being wasteful."
+    ];
+    const ratings = [5, 5, 4, 5, 5, 4, 5, 5, 4, 5];
+    const avatarStyles = [
+      "bg-brew-brown text-brew-foam",
+      "bg-brew-amber text-white",
+      "bg-brew-sage text-white",
+      "bg-brew-roast text-brew-foam",
+      "bg-brew-caramel text-brew-brown",
+      "bg-brew-espresso text-brew-foam",
+      "bg-brew-brown/80 text-brew-foam",
+      "bg-brew-amber/80 text-white",
+      "bg-brew-sage/80 text-white",
+      "bg-brew-roast/80 text-brew-foam"
+    ];
+
+    return topCustomers.slice(0, 10).map((customer, index) => ({
+      id: customer.id,
+      name: customer.name,
+      quote: quotes[index],
+      rating: ratings[index],
+      initials: getInitials(customer.name),
+      avatarClassName: avatarStyles[index]
+    }));
+  }, [topCustomers]);
 
   const recentActivity = useMemo(() => {
     const activity = [];
@@ -373,10 +424,56 @@ function DashboardPage() {
         </SectionCard>
       </section>
 
-      <section className="grid grid-cols-1 gap-5 xl:grid-cols-12 xl:items-stretch">
-        <SectionCard title="Campaign funnel" icon={BarChart3} className="xl:col-span-7 xl:min-h-[440px]" delay={240}>
-          <CampaignFunnelAnchor stats={funnelStats} />
-        </SectionCard>
+      <section className="grid grid-cols-1 items-start gap-5 xl:grid-cols-12">
+        <div className="grid gap-5 xl:col-span-7">
+          <SectionCard title="Campaign funnel" icon={BarChart3} className="self-start" bodyClassName="pb-0" delay={240}>
+            <CampaignFunnelAnchor stats={funnelStats} />
+          </SectionCard>
+
+          <SectionCard title="Customer reviews" icon={Star} delay={300}>
+            {customersLoading ? <LoadingSkeleton rows={4} /> : customerReviews.length ? (
+              <div className="scroll-container max-h-[482px] overflow-x-hidden overflow-y-auto pr-2 scroll-smooth">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {customerReviews.map((review) => {
+                    const isSelected = selectedReviewId === review.id;
+
+                    return (
+                      <button
+                        key={review.id}
+                        type="button"
+                        onClick={() => setSelectedReviewId((currentId) => (currentId === review.id ? null : review.id))}
+                        className={`min-h-[146px] rounded-lg border bg-brew-cream p-3 text-left transition duration-200 ease-out hover:border-brew-amber/40 hover:bg-white hover:shadow-sm ${
+                          isSelected ? "scale-[1.035] border-brew-amber/50 bg-white shadow-md" : "border-brew-brown/10 shadow-none"
+                        }`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className={`grid h-10 w-10 shrink-0 place-items-center rounded-full text-sm font-semibold ${review.avatarClassName}`}>
+                            {review.initials}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-semibold text-brew-brown">{review.name}</p>
+                            <div className="mt-1 flex items-center gap-0.5 text-brew-amber">
+                              {Array.from({ length: 5 }).map((_, index) => (
+                                <Star
+                                  key={index}
+                                  size={13}
+                                  className={index < review.rating ? "fill-current" : "text-brew-brown/20"}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                        <p className="mt-3 text-sm leading-5 text-brew-roast">"{review.quote}"</p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : (
+              <EmptyState icon={Star} title="No customer reviews yet" description="Reviews will use top customer names when customer data is available." />
+            )}
+          </SectionCard>
+        </div>
 
         <div className="grid gap-5 xl:col-span-5">
           <SectionCard title="Top customers" icon={PackageCheck} delay={300}>
@@ -385,18 +482,29 @@ function DashboardPage() {
                 <div className="grid grid-cols-[32px_minmax(0,1fr)_82px_92px_78px] gap-2 px-2 text-xs font-semibold uppercase text-brew-roast">
                   <span>Rank</span><span>Name</span><span>Orders</span><span>Spent</span><span>Health</span>
                 </div>
-                {topCustomers.map((customer, index) => {
-                  const health = getCustomerHealth(customer);
-                  return (
-                    <div key={customer.id} className="grid grid-cols-[32px_minmax(0,1fr)_82px_92px_78px] items-center gap-2 rounded-lg border border-brew-brown/10 bg-brew-cream px-2 py-2 text-sm transition duration-200 ease-in-out hover:border-brew-amber/40 hover:bg-white hover:shadow-sm">
-                      <span className="font-semibold text-brew-brown">{index + 1}</span>
-                      <span className="min-w-0"><span className="block truncate font-semibold text-brew-brown">{customer.name}</span><span className="block truncate text-xs text-brew-roast">{customer.city || "Unknown city"}</span></span>
-                      <span className="text-brew-roast">{formatNumber(customer.total_orders)}</span>
-                      <span className="font-semibold text-brew-brown">{formatCurrency(customer.total_spent)}</span>
-                      <HealthBadge value={health} />
-                    </div>
-                  );
-                })}
+                <div className="scroll-container max-h-[292px] space-y-2 overflow-x-hidden overflow-y-auto pr-2 scroll-smooth">
+                  {topCustomers.map((customer, index) => {
+                    const health = getCustomerHealth(customer);
+                    const isSelected = selectedTopCustomerId === customer.id;
+
+                    return (
+                      <button
+                        key={customer.id}
+                        type="button"
+                        onClick={() => setSelectedTopCustomerId((currentId) => (currentId === customer.id ? null : customer.id))}
+                        className={`grid w-full grid-cols-[32px_minmax(0,1fr)_82px_92px_78px] items-center gap-2 rounded-lg border bg-brew-cream px-2 py-2 text-left text-sm transition duration-200 ease-out hover:border-brew-amber/40 hover:bg-white hover:shadow-sm ${
+                          isSelected ? "scale-[1.025] border-brew-amber/50 bg-white shadow-md" : "border-brew-brown/10 shadow-none"
+                        }`}
+                      >
+                        <span className="font-semibold text-brew-brown">{index + 1}</span>
+                        <span className="min-w-0"><span className="block truncate font-semibold text-brew-brown">{customer.name}</span><span className="block truncate text-xs text-brew-roast">{customer.city || "Unknown city"}</span></span>
+                        <span className="text-brew-roast">{formatNumber(customer.total_orders)}</span>
+                        <span className="font-semibold text-brew-brown">{formatCurrency(customer.total_spent)}</span>
+                        <HealthBadge value={health} />
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             ) : <EmptyState icon={Users} title="No top customers yet" description="Top spenders will appear when customer spend data is available." />}
           </SectionCard>
@@ -405,14 +513,23 @@ function DashboardPage() {
             {customersLoading ? <LoadingSkeleton rows={4} /> : recentActivity.length ? (
               <div className="space-y-2">
                 {recentActivity.map((activity, index) => (
-                  <div key={activity.id} className="dashboard-enter flex items-start gap-3 rounded-lg border border-brew-brown/10 bg-brew-cream p-3 transition duration-200 ease-in-out hover:border-brew-amber/40 hover:bg-white hover:shadow-sm" style={{ animationDelay: `${420 + index * 80}ms` }}>
+                  <button
+                    key={activity.id}
+                    type="button"
+                    onClick={() => setSelectedActivityId((currentId) => (currentId === activity.id ? null : activity.id))}
+                    className={`dashboard-enter flex w-full items-start gap-3 rounded-lg border bg-brew-cream p-3 text-left transition duration-200 ease-out hover:border-brew-amber/40 hover:bg-white hover:shadow-sm ${
+                      selectedActivityId === activity.id ? "scale-[1.025] border-brew-amber/50 bg-white shadow-md" : "border-brew-brown/10 shadow-none"
+                    }`}
+                    style={{ animationDelay: `${420 + index * 80}ms` }}
+                  >
                     <div className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-full bg-brew-amber/15 text-brew-amber"><CalendarClock size={17} /></div>
                     <div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><p className="truncate text-sm font-semibold text-brew-brown">{activity.label}</p><span className="rounded-full bg-white px-2 py-0.5 text-xs font-medium text-brew-roast ring-1 ring-brew-brown/10">{activity.type}</span></div><p className="mt-1 text-sm text-brew-roast">{activity.meta}</p><p className="mt-1 text-xs text-brew-roast/75">{formatDate(activity.date)}</p></div>
-                  </div>
+                  </button>
                 ))}
               </div>
             ) : <EmptyState icon={Activity} title="No recent activity available" description="The current customer and campaign records do not expose enough dated activity yet." />}
           </SectionCard>
+
         </div>
       </section>
     </div>

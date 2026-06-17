@@ -7,12 +7,19 @@ function CityCustomersBarChart({ data = [] }) {
   }
 
   return (
-    <div className="h-80 w-full rounded-lg border border-brew-brown/10 bg-brew-foam p-4 shadow-sm">
+    <div className="h-80 w-full rounded-lg border border-brew-brown/10 bg-brew-foam p-4 shadow-sm transition duration-300 ease-in-out hover:shadow-md">
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={data} margin={{ top: 12, right: 12, left: 0, bottom: 8 }}>
-          <CartesianGrid stroke="#eadfce" strokeDasharray="3 3" vertical={false} />
-          <XAxis dataKey="city" tickLine={false} axisLine={false} tick={{ fill: "#7a5136", fontSize: 12 }} />
-          <YAxis allowDecimals={false} tickLine={false} axisLine={false} tick={{ fill: "#7a5136", fontSize: 12 }} />
+        <BarChart data={data} layout="vertical" margin={{ top: 12, right: 20, left: 12, bottom: 8 }}>
+          <CartesianGrid stroke="#eadfce" strokeDasharray="3 3" horizontal={false} />
+          <XAxis type="number" allowDecimals={false} tickLine={false} axisLine={false} tick={{ fill: "#7a5136", fontSize: 12 }} />
+          <YAxis
+            type="category"
+            dataKey="city"
+            width={96}
+            tickLine={false}
+            axisLine={false}
+            tick={{ fill: "#7a5136", fontSize: 12 }}
+          />
           <Tooltip
             cursor={{ fill: "rgba(200, 133, 46, 0.10)" }}
             contentStyle={{
@@ -22,7 +29,7 @@ function CityCustomersBarChart({ data = [] }) {
               color: "#4a2c1d"
             }}
           />
-          <Bar dataKey="customers" fill="#c8852e" radius={[6, 6, 0, 0]} name="Customers" />
+          <Bar dataKey="customers" fill="#c8852e" radius={[0, 6, 6, 0]} name="Customers" animationDuration={800} />
         </BarChart>
       </ResponsiveContainer>
     </div>

@@ -1,3 +1,4 @@
+import { Toaster } from "sonner";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import AppLayout from "@/layout/AppLayout";
 
@@ -6,18 +7,21 @@ import CustomersPage from "@/pages/CustomersPage";
 import SegmentsPage from "@/pages/SegmentsPage";
 import CampaignsPage from "@/pages/CampaignsPage";
 
-  function App() {
+function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route element={<AppLayout />}>
-          <Route path="/" element={<DashboardPage />} />
-          <Route path="/customers" element={<CustomersPage />} />
-          <Route path="/segments" element={<SegmentsPage />} />
-          <Route path="/campaigns" element={<CampaignsPage />} />
-        </Route>
-      </Routes>
-    </BrowserRouter>
+    <>
+      <BrowserRouter>
+        <Routes>
+          <Route element={<AppLayout />}>
+            <Route path="/" element={<DashboardPage />} />
+            <Route path="/customers" element={<CustomersPage />} />
+            <Route path="/segments" element={<SegmentsPage />} />
+            <Route path="/campaigns" element={<CampaignsPage />} />
+          </Route>
+        </Routes>
+      </BrowserRouter>
+      <Toaster position="top-right" richColors />
+    </>
   );
 }
 

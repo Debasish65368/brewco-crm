@@ -35,3 +35,40 @@
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
 }
+
+@layer utilities {
+  @keyframes dashboard-enter {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .dashboard-enter {
+    animation: dashboard-enter 520ms ease-out both;
+  }
+
+  .dashboard-hover {
+    transition: border-color 180ms ease-in-out, box-shadow 180ms ease-in-out, background-color 180ms ease-in-out, transform 180ms ease-in-out;
+  }
+
+  .dashboard-hover:hover {
+    box-shadow: 0 14px 32px rgba(45, 26, 18, 0.10);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .dashboard-enter {
+      animation: none;
+    }
+
+    .dashboard-hover,
+    .dashboard-hover:hover {
+      transition: none;
+      transform: none;
+    }
+  }
+}

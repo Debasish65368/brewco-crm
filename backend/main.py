@@ -713,6 +713,37 @@ async def dashboard_stats():
     finally:
         await db_pool.release(conn)
 
+# =====================================================
+# GET /dashboard/revenue-trend
+# =====================================================
+
+@app.get("/dashboard/revenue-trend")
+async def dashboard_revenue_trend():
+    conn = await get_connection()
+    try:
+        rows = await conn.fetch(
+            """
+            SELECT days.day::date AS date, COALESCE(SUM(o.amount), 0) AS revenue
+            FROM generate_series(
+                CURRENT_DATE - INTERVAL '29 days',
+                CURRENT_DATE,
+                INTERVAL '1 day'
+            ) AS days(day)
+            LEFT JOIN orders o ON DATE(o.created_at) = days.day::date
+            GROUP BY days.day
+            ORDER BY days.day
+            """
+        )
+
+        return [
+            {
+                "date": row["date"].isoformat(),
+                "revenue": float(row["revenue"])
+            }
+            for row in rows
+        ]
+    finally:
+        await db_pool.release(conn)
 
 # =====================================================
 # POST /ai/suggest-segment

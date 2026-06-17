@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Bot, Loader2, Megaphone, PenLine, Send } from "lucide-react";
+import { Bot, Loader2, Megaphone, PenLine, Send, Trash2 } from "lucide-react";
 import Drawer from "@/components/common/Drawer";
 import EmptyState from "@/components/common/EmptyState";
 import ErrorState from "@/components/common/ErrorState";
@@ -19,8 +19,7 @@ function formatDate(value) {
 
   return new Intl.DateTimeFormat("en-US", {
     month: "short",
-    day: "numeric",
-    year: "numeric"
+    day: "numeric"
   }).format(new Date(value));
 }
 
@@ -74,7 +73,7 @@ function FunnelBar({ label, value, max }) {
 }
 
 function CampaignsPage() {
-  const { data, loading, error, refetch, createCampaign } = useCampaigns();
+  const { data, loading, error, refetch, createCampaign, deleteCampaign } = useCampaigns();
   const { data: segments, loading: segmentsLoading } = useSegments();
   const [form, setForm] = useState({ name: "", segment_id: "", channel: "email", message: "" });
   const [goal, setGoal] = useState("");
@@ -84,6 +83,8 @@ function CampaignsPage() {
   const [campaignStats, setCampaignStats] = useState(null);
   const [statsLoading, setStatsLoading] = useState(false);
   const [statsError, setStatsError] = useState(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
 
   const selectedSegment = useMemo(
     () => segments.find((segment) => String(segment.id) === String(form.segment_id)),
@@ -162,6 +163,23 @@ function CampaignsPage() {
     setStatsLoading(false);
   };
 
+  const handleDeleteCampaign = async (campaign) => {
+    setDeletingId(campaign.id);
+
+    try {
+      await deleteCampaign(campaign.id);
+      setConfirmDeleteId(null);
+      if (String(selectedCampaign?.id) === String(campaign.id)) {
+        closeStatsDrawer();
+      }
+      toast.success("Campaign deleted successfully");
+    } catch (err) {
+      toast.error(err.message || "Failed to delete campaign");
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   const sentCount = Number(campaignStats?.sent || 0);
   const deliveryRate = getDeliveryRate(campaignStats);
 
@@ -183,35 +201,88 @@ function CampaignsPage() {
             />
           ) : (
             <section className="overflow-hidden rounded-lg border border-brew-brown/10 bg-brew-foam shadow-sm">
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-brew-brown/10 text-sm">
+              <div className="scroll-container overflow-x-hidden">
+                <table className="w-full table-fixed divide-y divide-brew-brown/10 text-sm">
+                  <colgroup>
+                    <col className="w-[31%]" />
+                    <col className="w-[22%]" />
+                    <col className="w-[11%]" />
+                    <col className="w-[11%]" />
+                    <col className="w-[13%]" />
+                    <col className="w-[12%]" />
+                  </colgroup>
                   <thead className="bg-brew-cream text-left text-xs uppercase text-brew-roast">
                     <tr>
-                      <th className="px-4 py-3 font-semibold">Name</th>
-                      <th className="px-4 py-3 font-semibold">Segment</th>
-                      <th className="px-4 py-3 font-semibold">Channel</th>
-                      <th className="px-4 py-3 font-semibold">Status</th>
-                      <th className="px-4 py-3 font-semibold">Created At</th>
+                      <th className="px-3 py-3 font-semibold">Name</th>
+                      <th className="px-3 py-3 font-semibold">Segment</th>
+                      <th className="px-3 py-3 font-semibold">Channel</th>
+                      <th className="px-3 py-3 font-semibold">Status</th>
+                      <th className="px-3 py-3 font-semibold">Created</th>
+                      <th className="px-3 py-3 text-right font-semibold">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-brew-brown/10">
-                    {data.map((campaign) => (
-                      <tr
-                        key={campaign.id}
-                        onClick={() => handleCampaignClick(campaign)}
-                        className="cursor-pointer transition hover:bg-brew-cream/70"
-                      >
-                        <td className="whitespace-nowrap px-4 py-4 font-medium text-brew-brown">{campaign.name}</td>
-                        <td className="whitespace-nowrap px-4 py-4 text-brew-roast">
-                          {campaign.segment_name || campaign.segment_id || "Not available"}
-                        </td>
-                        <td className="whitespace-nowrap px-4 py-4 capitalize text-brew-roast">{campaign.channel}</td>
-                        <td className="whitespace-nowrap px-4 py-4">
-                          <StatusBadge value={campaign.status} />
-                        </td>
-                        <td className="whitespace-nowrap px-4 py-4 text-brew-roast">{formatDate(campaign.created_at)}</td>
-                      </tr>
-                    ))}
+                    {data.map((campaign) => {
+                      const isConfirmingDelete = String(confirmDeleteId) === String(campaign.id);
+                      const isDeleting = String(deletingId) === String(campaign.id);
+
+                      return (
+                        <tr
+                          key={campaign.id}
+                          onClick={() => handleCampaignClick(campaign)}
+                          className="cursor-pointer transition hover:bg-brew-cream/70"
+                        >
+                          <td className="truncate px-3 py-4 font-medium text-brew-brown" title={campaign.name}>
+                            {campaign.name}
+                          </td>
+                          <td
+                            className="truncate px-3 py-4 text-brew-roast"
+                            title={campaign.segment_name || String(campaign.segment_id || "Not available")}
+                          >
+                            {campaign.segment_name || campaign.segment_id || "Not available"}
+                          </td>
+                          <td className="truncate px-3 py-4 capitalize text-brew-roast">{campaign.channel}</td>
+                          <td className="px-3 py-4">
+                            <StatusBadge value={campaign.status} />
+                          </td>
+                          <td className="whitespace-nowrap px-3 py-4 text-brew-roast">{formatDate(campaign.created_at)}</td>
+                          <td className="px-3 py-4 text-right" onClick={(event) => event.stopPropagation()}>
+                            {isConfirmingDelete ? (
+                              <div className="ml-auto flex w-24 flex-col items-end gap-1 rounded-lg border border-red-200 bg-red-50 px-2 py-1.5">
+                                <span className="text-xs font-medium text-red-800">Delete?</span>
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteCampaign(campaign)}
+                                    disabled={isDeleting}
+                                    className="rounded-md bg-red-700 px-2 py-1 text-xs font-medium text-white transition hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-60"
+                                  >
+                                    {isDeleting ? "..." : "Yes"}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setConfirmDeleteId(null)}
+                                    disabled={isDeleting}
+                                    className="rounded-md border border-brew-brown/15 bg-brew-foam px-2 py-1 text-xs font-medium text-brew-brown transition hover:bg-brew-cream disabled:cursor-not-allowed disabled:opacity-60"
+                                  >
+                                    No
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => setConfirmDeleteId(campaign.id)}
+                                className="inline-grid h-9 w-9 place-items-center rounded-md text-brew-roast transition hover:bg-red-50 hover:text-red-700 focus:outline-none focus:ring-2 focus:ring-red-200"
+                                aria-label={`Delete ${campaign.name}`}
+                              >
+                                <Trash2 size={17} />
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

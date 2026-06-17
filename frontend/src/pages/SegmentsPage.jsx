@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { Bot, Layers3, Plus, Sparkles, Users } from "lucide-react";
+import { Bot, Layers3, Plus, Sparkles, Trash2, Users } from "lucide-react";
 import EmptyState from "@/components/common/EmptyState";
 import ErrorState from "@/components/common/ErrorState";
 import LoadingSkeleton from "@/components/common/LoadingSkeleton";
@@ -30,12 +30,14 @@ function Field({ label, children }) {
 }
 
 function SegmentsPage() {
-  const { data, loading, error, refetch, createSegment } = useSegments();
+  const { data, loading, error, refetch, createSegment, deleteSegment } = useSegments();
   const [form, setForm] = useState({ name: "", description: "" });
   const [aiPrompt, setAiPrompt] = useState("");
   const [aiSuggestion, setAiSuggestion] = useState(null);
   const [creating, setCreating] = useState(false);
   const [suggesting, setSuggesting] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
 
   const updateForm = (field, value) => {
     setForm((current) => ({ ...current, [field]: value }));
@@ -85,6 +87,20 @@ function SegmentsPage() {
     }
   };
 
+  const handleDeleteSegment = async (segment) => {
+    setDeletingId(segment.id);
+
+    try {
+      await deleteSegment(segment.id);
+      setConfirmDeleteId(null);
+      toast.success("Segment deleted successfully");
+    } catch (err) {
+      toast.error(err.message || "Failed to delete segment");
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <PageHeader title="Segments" description="Create and review customer groups for BrewCo campaigns." />
@@ -103,7 +119,11 @@ function SegmentsPage() {
             />
           ) : (
             <div className="grid gap-4 md:grid-cols-2">
-              {data.map((segment) => (
+              {data.map((segment) => {
+                const isConfirmingDelete = String(confirmDeleteId) === String(segment.id);
+                const isDeleting = String(deletingId) === String(segment.id);
+
+                return (
                 <article
                   key={segment.id}
                   className="rounded-lg border border-brew-brown/10 bg-brew-foam p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
@@ -115,10 +135,46 @@ function SegmentsPage() {
                         {segment.description || "No description provided."}
                       </p>
                     </div>
-                    <div className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-brew-amber/15 text-brew-amber">
-                      <Users size={19} />
+                    <div className="flex shrink-0 items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setConfirmDeleteId(segment.id)}
+                        className="grid h-10 w-10 place-items-center rounded-lg text-brew-roast transition hover:bg-red-50 hover:text-red-700 focus:outline-none focus:ring-2 focus:ring-red-200"
+                        aria-label={`Delete ${segment.name}`}
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                      <div className="grid h-10 w-10 place-items-center rounded-lg bg-brew-amber/15 text-brew-amber">
+                        <Users size={19} />
+                      </div>
                     </div>
                   </div>
+
+                  {isConfirmingDelete && (
+                    <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3">
+                      <p className="text-sm font-medium text-red-800">
+                        Delete this segment? Segments used by campaigns are blocked.
+                      </p>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteSegment(segment)}
+                          disabled={isDeleting}
+                          className="inline-flex h-9 items-center justify-center rounded-md bg-red-700 px-3 text-sm font-medium text-white transition hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {isDeleting ? "Deleting..." : "Delete"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setConfirmDeleteId(null)}
+                          disabled={isDeleting}
+                          className="inline-flex h-9 items-center justify-center rounded-md border border-brew-brown/15 bg-brew-foam px-3 text-sm font-medium text-brew-brown transition hover:bg-brew-cream disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
 
                   <div className="mt-5 flex flex-wrap gap-2 text-xs text-brew-roast">
                     {typeof segment.customer_count === "number" && (
@@ -138,7 +194,8 @@ function SegmentsPage() {
                     )}
                   </div>
                 </article>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

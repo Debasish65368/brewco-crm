@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   createSegment as createSegmentRequest,
+  deleteSegment as deleteSegmentRequest,
   getSegments
 } from "@/services/segmentsApi";
 
@@ -34,9 +35,15 @@ export function useSegments() {
     [refetch]
   );
 
+  const deleteSegment = useCallback(async (segmentId) => {
+    const result = await deleteSegmentRequest(segmentId);
+    setData((current) => current.filter((segment) => String(segment.id) !== String(segmentId)));
+    return result;
+  }, []);
+
   useEffect(() => {
     refetch();
   }, [refetch]);
 
-  return { data, loading, error, refetch, createSegment };
+  return { data, loading, error, refetch, createSegment, deleteSegment };
 }

@@ -7,3 +7,7 @@ export function getSegments() {
 export function createSegment(payload) {
   return apiClient.post("/segments", payload).then((response) => response.data);
 }
+
+export function deleteSegment(segmentId) {
+  return apiClient.delete(`/segments/${segmentId}`).then((response) => response.data);
+}

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   createCampaign as createCampaignRequest,
+  deleteCampaign as deleteCampaignRequest,
   getCampaigns
 } from "@/services/campaignsApi";
 
@@ -34,9 +35,15 @@ export function useCampaigns() {
     [refetch]
   );
 
+  const deleteCampaign = useCallback(async (campaignId) => {
+    const result = await deleteCampaignRequest(campaignId);
+    setData((current) => current.filter((campaign) => String(campaign.id) !== String(campaignId)));
+    return result;
+  }, []);
+
   useEffect(() => {
     refetch();
   }, [refetch]);
 
-  return { data, loading, error, refetch, createCampaign };
+  return { data, loading, error, refetch, createCampaign, deleteCampaign };
 }

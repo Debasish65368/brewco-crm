@@ -10,6 +10,12 @@ export function createCampaign(payload) {
     .then((response) => response.data);
 }
 
+export function deleteCampaign(campaignId) {
+  return apiClient
+    .delete(`/campaigns/${campaignId}`)
+    .then((response) => response.data);
+}
+
 export function getCampaignStats(campaignId) {
   return apiClient
     .get(`/campaigns/${campaignId}/stats`)

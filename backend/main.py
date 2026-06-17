@@ -505,6 +505,31 @@ async def get_segments():
 
 
 # =====================================================
+# DELETE /segments/{id}
+# =====================================================
+
+@app.delete("/segments/{segment_id}")
+async def delete_segment(segment_id: int):
+    conn = await get_connection()
+    try:
+        segment = await conn.fetchrow("SELECT id FROM segments WHERE id = $1", segment_id)
+        if not segment:
+            raise HTTPException(status_code=404, detail="Segment not found")
+
+        campaign_count = await conn.fetchval("SELECT COUNT(*) FROM campaigns WHERE segment_id = $1", segment_id)
+        if campaign_count:
+            raise HTTPException(
+                status_code=409,
+                detail="Segment is used by one or more campaigns and cannot be deleted"
+            )
+
+        await conn.execute("DELETE FROM segments WHERE id = $1", segment_id)
+        return {"success": True, "segment_id": segment_id}
+    finally:
+        await db_pool.release(conn)
+
+
+# =====================================================
 # HELPER: GET CUSTOMERS INSIDE A SEGMENT
 # =====================================================
 
@@ -600,6 +625,27 @@ async def get_campaigns():
             """
         )
         return [dict(row) for row in rows]
+    finally:
+        await db_pool.release(conn)
+
+
+# =====================================================
+# DELETE /campaigns/{id}
+# =====================================================
+
+@app.delete("/campaigns/{campaign_id}")
+async def delete_campaign(campaign_id: int):
+    conn = await get_connection()
+    try:
+        campaign = await conn.fetchrow("SELECT id FROM campaigns WHERE id = $1", campaign_id)
+        if not campaign:
+            raise HTTPException(status_code=404, detail="Campaign not found")
+
+        async with conn.transaction():
+            await conn.execute("DELETE FROM communications WHERE campaign_id = $1", campaign_id)
+            await conn.execute("DELETE FROM campaigns WHERE id = $1", campaign_id)
+
+        return {"success": True, "campaign_id": campaign_id}
     finally:
         await db_pool.release(conn)
 

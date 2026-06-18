@@ -13,8 +13,12 @@ from fastapi import (
     FastAPI,
     HTTPException,
     BackgroundTasks,
-    Query
+    Query,
+    Depends,
+    Request
 )
+import jwt
+from jwt import PyJWKClient
 
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -29,17 +33,18 @@ from groq import Groq
 load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+os.getenv("GROQ_API_KEY")
 
 CHANNEL_SERVICE_URL = os.getenv(
     "CHANNEL_SERVICE_URL",
     "http://localhost:8001/send"
 )
 
-CRM_RECEIPT_URL = os.getenv(
-    "CRM_RECEIPT_URL",
-    "http://localhost:8000/receipt"
-)
+CLERK_JWKS_URL = os.getenv("CLERK_JWKS_URL")
+CLERK_ISSUER = os.getenv("CLERK_ISSUER")
+
+if not CLERK_JWKS_URL:
+    raise Exception("CLERK_JWKS_URL missing in .env")
 
 if not DATABASE_URL:
     raise Exception("DATABASE_URL missing in .env")
@@ -76,6 +81,60 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# =====================================================
+# CLERK AUTH
+# =====================================================
+
+_jwk_client = None
+
+def get_jwk_client():
+    global _jwk_client
+
+    if _jwk_client is None:
+        _jwk_client = PyJWKClient(CLERK_JWKS_URL)
+
+    return _jwk_client
+
+
+async def verify_clerk_token(request: Request):
+    auth_header = request.headers.get("Authorization")
+
+    if not auth_header:
+        raise HTTPException(
+            status_code=401,
+            detail="Missing Authorization header"
+        )
+
+    if not auth_header.startswith("Bearer "):
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid Authorization header"
+        )
+
+    token = auth_header.replace("Bearer ", "")
+
+    try:
+        signing_key = get_jwk_client().get_signing_key_from_jwt(token)
+
+        payload = jwt.decode(
+            token,
+            signing_key.key,
+            algorithms=["RS256"],
+            issuer=CLERK_ISSUER if CLERK_ISSUER else None,
+            options={
+                "verify_aud": False
+            }
+        )
+
+        return payload
+
+    except Exception:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or expired Clerk token"
+        )
 
 
 # =====================================================
@@ -369,7 +428,10 @@ Requirements:
 # =====================================================
 
 @app.post("/customers/bulk")
-async def bulk_insert_customers(payload: CustomerBulkRequest):
+async def bulk_insert_customers(
+    payload: CustomerBulkRequest,
+    user=Depends(verify_clerk_token)
+):
     conn = await get_connection()
     try:
         inserted = 0
@@ -398,7 +460,8 @@ async def get_customers(
     city: Optional[str] = Query(None),
     min_spent: Optional[float] = Query(None),
     max_spent: Optional[float] = Query(None),
-    min_orders: Optional[int] = Query(None)
+    min_orders: Optional[int] = Query(None),
+    user=Depends(verify_clerk_token)
 ):
     conn = await get_connection()
     try:
@@ -434,7 +497,10 @@ async def get_customers(
 # =====================================================
 
 @app.post("/orders/bulk")
-async def bulk_insert_orders(payload: OrderBulkRequest):
+async def bulk_insert_orders(
+    payload: OrderBulkRequest,
+    user=Depends(verify_clerk_token)
+):
     conn = await get_connection()
     try:
         inserted = 0
@@ -465,7 +531,10 @@ async def bulk_insert_orders(payload: OrderBulkRequest):
 # =====================================================
 
 @app.post("/segments")
-async def create_segment(payload: SegmentCreate):
+async def create_segment(
+    payload: SegmentCreate,
+    user=Depends(verify_clerk_token)
+):
     conn = await get_connection()
     try:
         where_clause, values = build_segment_sql(payload.filter_json)
@@ -489,7 +558,9 @@ async def create_segment(payload: SegmentCreate):
 # =====================================================
 
 @app.get("/segments")
-async def get_segments():
+async def get_segments(
+    user=Depends(verify_clerk_token)
+):
     conn = await get_connection()
     try:
         rows = await conn.fetch("SELECT * FROM segments ORDER BY created_at DESC")
@@ -509,7 +580,10 @@ async def get_segments():
 # =====================================================
 
 @app.delete("/segments/{segment_id}")
-async def delete_segment(segment_id: int):
+async def delete_segment(
+    segment_id: int,
+    user=Depends(verify_clerk_token)
+):
     conn = await get_connection()
     try:
         segment = await conn.fetchrow("SELECT id FROM segments WHERE id = $1", segment_id)
@@ -589,7 +663,11 @@ async def process_campaign(campaign_id: int, segment_id: int, channel: str, mess
 # =====================================================
 
 @app.post("/campaigns")
-async def create_campaign(payload: CampaignCreate, background_tasks: BackgroundTasks):
+async def create_campaign(
+    payload: CampaignCreate,
+    background_tasks: BackgroundTasks,
+    user=Depends(verify_clerk_token)
+):
     conn = await get_connection()
     try:
         segment = await conn.fetchrow("SELECT * FROM segments WHERE id = $1", payload.segment_id)
@@ -614,7 +692,9 @@ async def create_campaign(payload: CampaignCreate, background_tasks: BackgroundT
 # =====================================================
 
 @app.get("/campaigns")
-async def get_campaigns():
+async def get_campaigns(
+    user=Depends(verify_clerk_token)
+):
     conn = await get_connection()
     try:
         rows = await conn.fetch(
@@ -634,7 +714,10 @@ async def get_campaigns():
 # =====================================================
 
 @app.delete("/campaigns/{campaign_id}")
-async def delete_campaign(campaign_id: int):
+async def delete_campaign(
+    campaign_id: int,
+    user=Depends(verify_clerk_token)
+):
     conn = await get_connection()
     try:
         campaign = await conn.fetchrow("SELECT id FROM campaigns WHERE id = $1", campaign_id)
@@ -655,7 +738,10 @@ async def delete_campaign(campaign_id: int):
 # =====================================================
 
 @app.get("/campaigns/{campaign_id}/stats")
-async def campaign_stats(campaign_id: int):
+async def campaign_stats(
+    campaign_id: int,
+    user=Depends(verify_clerk_token)
+):
     conn = await get_connection()
     try:
         campaign = await conn.fetchrow("SELECT * FROM campaigns WHERE id = $1", campaign_id)
@@ -722,7 +808,9 @@ async def receive_receipt(payload: CommunicationReceipt):
 # =====================================================
 
 @app.get("/dashboard/stats")
-async def dashboard_stats():
+async def dashboard_stats(
+    user=Depends(verify_clerk_token)
+):
     conn = await get_connection()
     try:
         total_customers = await conn.fetchval("SELECT COUNT(*) FROM customers")
@@ -764,7 +852,9 @@ async def dashboard_stats():
 # =====================================================
 
 @app.get("/dashboard/revenue-trend")
-async def dashboard_revenue_trend():
+async def dashboard_revenue_trend(
+    user=Depends(verify_clerk_token)
+):
     conn = await get_connection()
     try:
         rows = await conn.fetch(
@@ -796,7 +886,10 @@ async def dashboard_revenue_trend():
 # =====================================================
 
 @app.post("/ai/suggest-segment")
-async def ai_suggest_segment(payload: SegmentSuggestionRequest):
+async def ai_suggest_segment(
+    payload: SegmentSuggestionRequest,
+    user=Depends(verify_clerk_token)
+):
     try:
         filter_json = await generate_segment_filter(payload.prompt)
         return {"filter_json": filter_json}
@@ -811,7 +904,10 @@ async def ai_suggest_segment(payload: SegmentSuggestionRequest):
 # =====================================================
 
 @app.post("/ai/draft-message")
-async def ai_draft_message(payload: DraftMessageRequest):
+async def ai_draft_message(
+    payload: DraftMessageRequest,
+    user=Depends(verify_clerk_token)
+):
     try:
         message = await generate_campaign_message(payload.goal)
         return {"message": message}

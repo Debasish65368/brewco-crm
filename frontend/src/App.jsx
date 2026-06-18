@@ -1,5 +1,7 @@
+
 import { Toaster } from "sonner";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { SignedIn, SignedOut, RedirectToSignIn } from "@clerk/clerk-react";
 import AppLayout from "@/layout/AppLayout";
 
 import DashboardPage from "@/pages/DashboardPage";
@@ -11,18 +13,30 @@ function App() {
   return (
     <>
       <BrowserRouter>
-        <Routes>
-          <Route element={<AppLayout />}>
-            <Route path="/" element={<DashboardPage />} />
-            <Route path="/customers" element={<CustomersPage />} />
-            <Route path="/segments" element={<SegmentsPage />} />
-            <Route path="/campaigns" element={<CampaignsPage />} />
-          </Route>
-        </Routes>
+        <SignedIn>
+          <Routes>
+            <Route element={<AppLayout />}>
+              <Route path="/" element={<DashboardPage />} />
+              <Route path="/customers" element={<CustomersPage />} />
+              <Route path="/segments" element={<SegmentsPage />} />
+              <Route path="/campaigns" element={<CampaignsPage />} />
+            </Route>
+          </Routes>
+        </SignedIn>
+
+        <SignedOut>
+          <RedirectToSignIn />
+        </SignedOut>
       </BrowserRouter>
-      <Toaster position="top-right" richColors toastOptions={{ style: { marginTop: '0px' } }} />
+
+      <Toaster
+        position="top-right"
+        richColors
+        toastOptions={{ style: { marginTop: "0px" } }}
+      />
     </>
   );
 }
 
 export default App;
+

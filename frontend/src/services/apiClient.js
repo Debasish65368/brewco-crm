@@ -1,3 +1,4 @@
+
 import axios from "axios";
 
 const apiClient = axios.create({
@@ -7,6 +8,23 @@ const apiClient = axios.create({
   },
   timeout: 15000
 });
+
+apiClient.interceptors.request.use(
+  async (config) => {
+    try {
+      const token = await window.Clerk?.session?.getToken();
+
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    } catch (error) {
+      console.warn("Failed to retrieve Clerk token:", error);
+    }
+
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
 
 apiClient.interceptors.response.use(
   (response) => response,

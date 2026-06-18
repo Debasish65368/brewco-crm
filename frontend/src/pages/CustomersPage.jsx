@@ -68,9 +68,9 @@ function HealthBadge({ value }) {
   );
 }
 
-function DetailItem({ icon: Icon, label, value }) {
+function DetailItem({ icon: Icon, label, value, className = "" }) {
   return (
-    <div className="rounded-lg border border-brew-brown/10 bg-brew-cream p-4">
+    <div className={`min-w-0 rounded-lg border border-brew-brown/10 bg-brew-cream p-4 ${className}`}>
       <div className="flex items-center gap-2 text-xs font-medium uppercase text-brew-roast">
         <Icon size={15} />
         {label}
@@ -217,18 +217,18 @@ function CustomersPage() {
         {selectedCustomer && (
           <div className="space-y-5">
             <div className="rounded-lg border border-brew-brown/10 bg-brew-cream p-5">
-              <div className="flex items-start justify-between gap-4">
-                <div className="min-w-0">
-                  <h3 className="truncate text-2xl font-bold text-brew-brown">{selectedCustomer.name}</h3>
-                  <p className="mt-1 truncate text-sm text-brew-roast">{selectedCustomer.email}</p>
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div className="min-w-0 flex-1">
+                  <h3 className="break-words text-2xl font-bold text-brew-brown">{selectedCustomer.name}</h3>
+                  <p className="mt-1 break-all text-sm text-brew-roast">{selectedCustomer.email}</p>
                   <p className="mt-1 text-sm text-brew-roast">{selectedCustomer.city || "Not available"}</p>
                 </div>
                 <HealthBadge value={getCustomerHealth(selectedCustomer)} />
               </div>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2">
-              <DetailItem icon={Mail} label="Email" value={selectedCustomer.email} />
+            <div className="grid grid-cols-2 gap-3">
+              <DetailItem className="col-span-2" icon={Mail} label="Email" value={selectedCustomer.email} />
               <DetailItem icon={MapPin} label="City" value={selectedCustomer.city} />
               <DetailItem icon={ShoppingBag} label="Total orders" value={Number(selectedCustomer.total_orders || 0).toLocaleString("en-US")} />
               <DetailItem icon={WalletCards} label="Total spent" value={formatCurrency(selectedCustomer.total_spent)} />

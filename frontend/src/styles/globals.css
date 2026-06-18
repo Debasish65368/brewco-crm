@@ -30,9 +30,17 @@
     @apply border-border;
   }
 
+  html,
+  body,
+  #root {
+    min-height: 100%;
+    background: hsl(var(--background));
+  }
+
   body {
     @apply bg-background text-foreground antialiased;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    margin: 0;
   }
 }
 
@@ -76,6 +84,14 @@
   .scroll-container::-webkit-scrollbar-thumb {
     background: #c8852e;
     border-radius: 4px;
+  }
+
+  .row--selected {
+    background-color: #f0e8d8 !important;
+  }
+
+  .row--selected:hover {
+    background-color: #f0e8d8 !important;
   }
 
   @media (prefers-reduced-motion: reduce) {

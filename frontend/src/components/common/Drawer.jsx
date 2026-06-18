@@ -6,14 +6,14 @@ function Drawer({ open, title, description, children, footer, onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50">
+    <div className="fixed inset-0 top-0 z-50 m-0 p-0">
       <button
         type="button"
-        className="absolute inset-0 cursor-default bg-brew-espresso/35"
+        className="fixed inset-0 top-0 z-0 m-0 cursor-default bg-brew-espresso/35 p-0"
         onClick={onClose}
         aria-label="Close drawer overlay"
       />
-      <section className="absolute right-0 top-0 flex h-full w-full max-w-xl flex-col bg-brew-foam shadow-2xl sm:border-l sm:border-brew-brown/10">
+      <section className="fixed right-0 top-0 bottom-0 z-10 m-0 flex h-screen w-full max-w-[400px] flex-col overflow-hidden rounded-l-xl bg-[#f5f0eb] p-0 shadow-[0_4px_24px_rgba(0,0,0,0.18)] sm:border-l sm:border-brew-brown/10">
         <header className="flex items-start justify-between gap-4 border-b border-brew-brown/10 px-5 py-4">
           <div className="min-w-0">
             <h2 className="text-lg font-semibold text-brew-brown">{title}</h2>

@@ -20,7 +20,7 @@ function App() {
           </Route>
         </Routes>
       </BrowserRouter>
-      <Toaster position="top-right" richColors />
+      <Toaster position="top-right" richColors toastOptions={{ style: { marginTop: '0px' } }} />
     </>
   );
 }

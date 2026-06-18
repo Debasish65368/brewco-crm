@@ -38,6 +38,7 @@ function SegmentsPage() {
   const [suggesting, setSuggesting] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
+  const [selectedSegmentId, setSelectedSegmentId] = useState(null);
 
   const updateForm = (field, value) => {
     setForm((current) => ({ ...current, [field]: value }));
@@ -93,6 +94,9 @@ function SegmentsPage() {
     try {
       await deleteSegment(segment.id);
       setConfirmDeleteId(null);
+      if (String(selectedSegmentId) === String(segment.id)) {
+        setSelectedSegmentId(null);
+      }
       toast.success("Segment deleted successfully");
     } catch (err) {
       toast.error(err.message || "Failed to delete segment");
@@ -122,11 +126,13 @@ function SegmentsPage() {
               {data.map((segment) => {
                 const isConfirmingDelete = String(confirmDeleteId) === String(segment.id);
                 const isDeleting = String(deletingId) === String(segment.id);
+                const isSelected = String(selectedSegmentId) === String(segment.id);
 
                 return (
                 <article
                   key={segment.id}
-                  className="rounded-lg border border-brew-brown/10 bg-brew-foam p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                  onClick={() => setSelectedSegmentId(segment.id)}
+                  className={`cursor-pointer rounded-lg border border-brew-brown/10 bg-brew-foam p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${isSelected ? "row--selected" : ""}`}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
@@ -138,7 +144,10 @@ function SegmentsPage() {
                     <div className="flex shrink-0 items-center gap-2">
                       <button
                         type="button"
-                        onClick={() => setConfirmDeleteId(segment.id)}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setConfirmDeleteId(segment.id);
+                        }}
                         className="grid h-10 w-10 place-items-center rounded-lg text-brew-roast transition hover:bg-red-50 hover:text-red-700 focus:outline-none focus:ring-2 focus:ring-red-200"
                         aria-label={`Delete ${segment.name}`}
                       >
@@ -158,7 +167,10 @@ function SegmentsPage() {
                       <div className="mt-3 flex flex-wrap gap-2">
                         <button
                           type="button"
-                          onClick={() => handleDeleteSegment(segment)}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            handleDeleteSegment(segment);
+                          }}
                           disabled={isDeleting}
                           className="inline-flex h-9 items-center justify-center rounded-md bg-red-700 px-3 text-sm font-medium text-white transition hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-60"
                         >
@@ -166,7 +178,10 @@ function SegmentsPage() {
                         </button>
                         <button
                           type="button"
-                          onClick={() => setConfirmDeleteId(null)}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setConfirmDeleteId(null);
+                          }}
                           disabled={isDeleting}
                           className="inline-flex h-9 items-center justify-center rounded-md border border-brew-brown/15 bg-brew-foam px-3 text-sm font-medium text-brew-brown transition hover:bg-brew-cream disabled:cursor-not-allowed disabled:opacity-60"
                         >

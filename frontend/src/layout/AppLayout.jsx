@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Outlet } from "react-router-dom";
-import { Toaster } from "react-hot-toast";
 import MobileSidebar from "./MobileSidebar";
 import Sidebar from "./Sidebar";
 
@@ -14,7 +13,7 @@ function AppLayout() {
         <Sidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed((value) => !value)} />
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <div className="sticky top-0 z-30 flex h-16 items-center border-b border-brew-brown/10 bg-brew-cream/90 px-4 backdrop-blur lg:hidden">
+          <div className="hidden">
             <MobileSidebar open={mobileOpen} onOpenChange={setMobileOpen} />
             <div className="ml-3 flex items-center gap-2 text-sm font-semibold text-brew-brown">
               <span className="grid h-8 w-8 place-items-center rounded-md bg-brew-brown text-xs text-brew-foam">BC</span>
@@ -29,31 +28,6 @@ function AppLayout() {
           </main>
         </div>
       </div>
-
-      <Toaster
-        position="top-right"
-        toastOptions={{
-          duration: 3500,
-          style: {
-            background: "#fffaf3",
-            border: "1px solid rgba(74, 44, 29, 0.14)",
-            color: "#4a2c1d",
-            boxShadow: "0 18px 45px rgba(45, 26, 18, 0.12)"
-          },
-          success: {
-            iconTheme: {
-              primary: "#6f8068",
-              secondary: "#fffaf3"
-            }
-          },
-          error: {
-            iconTheme: {
-              primary: "#b42318",
-              secondary: "#fffaf3"
-            }
-          }
-        }}
-      />
     </div>
   );
 }

@@ -441,9 +441,9 @@ function DashboardPage() {
                       <button
                         key={review.id}
                         type="button"
-                        onClick={() => setSelectedReviewId((currentId) => (currentId === review.id ? null : review.id))}
+                        onClick={() => setSelectedReviewId(review.id)}
                         className={`min-h-[146px] rounded-lg border bg-brew-cream p-3 text-left transition duration-200 ease-out hover:border-brew-amber/40 hover:bg-white hover:shadow-sm ${
-                          isSelected ? "scale-[1.035] border-brew-amber/50 bg-white shadow-md" : "border-brew-brown/10 shadow-none"
+                          isSelected ? "row--selected shadow-md" : "border-brew-brown/10 shadow-none"
                         }`}
                       >
                         <div className="flex items-start gap-3">
@@ -491,9 +491,9 @@ function DashboardPage() {
                       <button
                         key={customer.id}
                         type="button"
-                        onClick={() => setSelectedTopCustomerId((currentId) => (currentId === customer.id ? null : customer.id))}
+                        onClick={() => setSelectedTopCustomerId(customer.id)}
                         className={`grid w-full grid-cols-[32px_minmax(0,1fr)_82px_92px_78px] items-center gap-2 rounded-lg border bg-brew-cream px-2 py-2 text-left text-sm transition duration-200 ease-out hover:border-brew-amber/40 hover:bg-white hover:shadow-sm ${
-                          isSelected ? "scale-[1.025] border-brew-amber/50 bg-white shadow-md" : "border-brew-brown/10 shadow-none"
+                          isSelected ? "row--selected shadow-md" : "border-brew-brown/10 shadow-none"
                         }`}
                       >
                         <span className="font-semibold text-brew-brown">{index + 1}</span>
@@ -516,9 +516,9 @@ function DashboardPage() {
                   <button
                     key={activity.id}
                     type="button"
-                    onClick={() => setSelectedActivityId((currentId) => (currentId === activity.id ? null : activity.id))}
+                    onClick={() => setSelectedActivityId(activity.id)}
                     className={`dashboard-enter flex w-full items-start gap-3 rounded-lg border bg-brew-cream p-3 text-left transition duration-200 ease-out hover:border-brew-amber/40 hover:bg-white hover:shadow-sm ${
-                      selectedActivityId === activity.id ? "scale-[1.025] border-brew-amber/50 bg-white shadow-md" : "border-brew-brown/10 shadow-none"
+                      selectedActivityId === activity.id ? "row--selected shadow-md" : "border-brew-brown/10 shadow-none"
                     }`}
                     style={{ animationDelay: `${420 + index * 80}ms` }}
                   >

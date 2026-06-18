@@ -49,7 +49,7 @@ function Field({ label, children }) {
 
 function StatCard({ label, value }) {
   return (
-    <div className="rounded-lg border border-brew-brown/10 bg-brew-cream p-4">
+    <div className="rounded-lg border border-brew-brown/10 bg-white/60 p-4">
       <p className="text-xs font-medium uppercase text-brew-roast">{label}</p>
       <p className="mt-2 text-2xl font-semibold text-brew-brown">{value}</p>
     </div>
@@ -80,6 +80,7 @@ function CampaignsPage() {
   const [creating, setCreating] = useState(false);
   const [drafting, setDrafting] = useState(false);
   const [selectedCampaign, setSelectedCampaign] = useState(null);
+  const [selectedCampaignId, setSelectedCampaignId] = useState(null);
   const [campaignStats, setCampaignStats] = useState(null);
   const [statsLoading, setStatsLoading] = useState(false);
   const [statsError, setStatsError] = useState(null);
@@ -142,6 +143,7 @@ function CampaignsPage() {
 
   const handleCampaignClick = async (campaign) => {
     setSelectedCampaign(campaign);
+    setSelectedCampaignId(campaign.id);
     setCampaignStats(null);
     setStatsError(null);
     setStatsLoading(true);
@@ -158,6 +160,7 @@ function CampaignsPage() {
 
   const closeStatsDrawer = () => {
     setSelectedCampaign(null);
+    setSelectedCampaignId(null);
     setCampaignStats(null);
     setStatsError(null);
     setStatsLoading(false);
@@ -204,14 +207,14 @@ function CampaignsPage() {
               <div className="scroll-container overflow-x-hidden">
                 <table className="w-full table-fixed divide-y divide-brew-brown/10 text-sm">
                   <colgroup>
-                    <col className="w-[30%]" />
+                    <col className="w-[25%]" />
                     <col className="w-[21%]" />
-                    <col className="w-[11%]" />
+                    <col className="w-[16%]" />
                     <col className="w-[11%]" />
                     <col className="w-[12%]" />
                     <col className="w-[15%]" />
                   </colgroup>
-                  <thead className="bg-brew-cream text-left text-xs uppercase text-brew-roast">
+                  <thead className="bg-white/60 text-left text-xs uppercase text-brew-roast">
                     <tr>
                       <th className="px-3 py-3 font-semibold">Name</th>
                       <th className="px-3 py-3 font-semibold">Segment</th>
@@ -225,12 +228,13 @@ function CampaignsPage() {
                     {data.map((campaign) => {
                       const isConfirmingDelete = String(confirmDeleteId) === String(campaign.id);
                       const isDeleting = String(deletingId) === String(campaign.id);
+                      const isSelected = String(selectedCampaignId) === String(campaign.id);
 
                       return (
                         <tr
                           key={campaign.id}
                           onClick={() => handleCampaignClick(campaign)}
-                          className="cursor-pointer transition hover:bg-brew-cream/70"
+                          className={`cursor-pointer transition ${isSelected ? "row--selected" : "hover:bg-brew-cream/70"}`}
                         >
                           <td className="truncate px-3 py-4 font-medium text-brew-brown" title={campaign.name}>
                             {campaign.name}
@@ -241,7 +245,7 @@ function CampaignsPage() {
                           >
                             {campaign.segment_name || campaign.segment_id || "Not available"}
                           </td>
-                          <td className="truncate px-3 py-4 capitalize text-brew-roast">{campaign.channel}</td>
+                          <td className="whitespace-nowrap px-3 py-4 capitalize text-brew-roast">{campaign.channel}</td>
                           <td className="px-3 py-4">
                             <StatusBadge value={campaign.status} />
                           </td>
@@ -263,7 +267,7 @@ function CampaignsPage() {
                                     type="button"
                                     onClick={() => setConfirmDeleteId(null)}
                                     disabled={isDeleting}
-                                    className="rounded-md border border-brew-brown/15 bg-brew-foam px-2 py-1 text-xs font-medium text-brew-brown transition hover:bg-brew-cream disabled:cursor-not-allowed disabled:opacity-60"
+                                    className="rounded-md border border-brew-brown/15 bg-brew-foam px-2 py-1 text-xs font-medium text-brew-brown transition hover:bg-white/60 disabled:cursor-not-allowed disabled:opacity-60"
                                   >
                                     No
                                   </button>
@@ -323,7 +327,7 @@ function CampaignsPage() {
               </Field>
 
               {selectedSegment && (
-                <div className="rounded-lg border border-brew-amber/25 bg-brew-cream px-3 py-2 text-sm font-medium text-brew-roast">
+                <div className="rounded-lg border border-brew-amber/25 bg-white/60 px-3 py-2 text-sm font-medium text-brew-roast">
                   {Number(selectedSegment.customer_count || 0) === 0
                     ? "⚠️ This segment has no customers"
                     : `📢 ${Number(selectedSegment.customer_count || 0).toLocaleString("en-US")} customers will receive this campaign`}
@@ -396,7 +400,7 @@ function CampaignsPage() {
         onClose={closeStatsDrawer}
       >
         {statsLoading ? (
-          <div className="flex min-h-64 items-center justify-center rounded-lg border border-brew-brown/10 bg-brew-cream">
+          <div className="flex min-h-64 items-center justify-center rounded-lg border border-brew-brown/10 bg-white/60">
             <div className="flex items-center gap-3 text-sm font-medium text-brew-roast">
               <Loader2 className="h-5 w-5 animate-spin" />
               Loading campaign stats...
@@ -415,7 +419,7 @@ function CampaignsPage() {
               <StatCard label="Delivery Rate" value={`${deliveryRate}%`} />
             </div>
 
-            <div className="rounded-lg border border-brew-brown/10 bg-brew-cream p-4">
+            <div className="rounded-lg border border-brew-brown/15 bg-white/60 p-4">
               <h3 className="text-sm font-semibold text-brew-brown">Funnel</h3>
               <div className="mt-4 space-y-4">
                 <FunnelBar label="Sent" value={campaignStats.sent} max={sentCount} />

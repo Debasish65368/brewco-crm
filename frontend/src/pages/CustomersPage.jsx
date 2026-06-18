@@ -163,17 +163,17 @@ function CustomersPage() {
           description="Try a different name, email, or city search."
         />
       ) : (
-        <section className="overflow-hidden rounded-lg border border-brew-brown/10 bg-brew-foam shadow-sm">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-brew-brown/10 text-sm">
+        <section className="min-w-0 overflow-hidden rounded-lg border border-brew-brown/10 bg-brew-foam shadow-sm">
+          <div className="min-w-0 overflow-x-auto">
+            <table className="w-full divide-y divide-brew-brown/10 text-sm">
               <thead className="bg-brew-cream text-left text-xs uppercase text-brew-roast">
                 <tr>
-                  <th className="px-4 py-3 font-semibold">Name</th>
-                  <th className="px-4 py-3 font-semibold">Email</th>
-                  <th className="px-4 py-3 font-semibold">City</th>
-                  <th className="px-4 py-3 font-semibold">Health</th>
-                  <th className="px-4 py-3 text-right font-semibold">Total Orders</th>
-                  <th className="px-4 py-3 text-right font-semibold">Total Spent</th>
+                  <th className="px-3 py-3 font-semibold">Name</th>
+                  <th className="px-3 py-3 font-semibold">Email</th>
+                  <th className="px-3 py-3 font-semibold">City</th>
+                  <th className="px-3 py-3 font-semibold">Health</th>
+                  <th className="px-2 py-3 text-right font-semibold">Orders</th>
+                  <th className="px-2 py-3 text-right font-semibold">Spent</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-brew-brown/10">
@@ -187,16 +187,16 @@ function CustomersPage() {
                       onClick={() => setSelectedCustomer(customer)}
                       className={`cursor-pointer transition hover:bg-brew-cream/70 ${isSelected ? "row--selected" : ""}`}
                     >
-                      <td className="whitespace-nowrap px-4 py-4 font-medium text-brew-brown">{customer.name}</td>
-                      <td className="whitespace-nowrap px-4 py-4 text-brew-roast">{customer.email}</td>
-                      <td className="whitespace-nowrap px-4 py-4 text-brew-roast">{customer.city || "Not available"}</td>
-                      <td className="whitespace-nowrap px-4 py-4">
+                      <td className="px-3 py-4 font-medium text-brew-brown" title={customer.name}>{customer.name}</td>
+                      <td className="px-3 py-4 text-brew-roast" title={customer.email}>{customer.email}</td>
+                      <td className="px-3 py-4 text-brew-roast" title={customer.city || "Not available"}>{customer.city || "Not available"}</td>
+                      <td className="whitespace-nowrap px-3 py-4">
                         <HealthBadge value={health} />
                       </td>
-                      <td className="whitespace-nowrap px-4 py-4 text-right text-brew-brown">
+                      <td className="whitespace-nowrap px-2 py-4 text-right text-brew-brown">
                         {Number(customer.total_orders || 0).toLocaleString("en-US")}
                       </td>
-                      <td className="whitespace-nowrap px-4 py-4 text-right font-semibold text-brew-brown">
+                      <td className="whitespace-nowrap px-2 py-4 text-right font-semibold text-brew-brown">
                         {formatCurrency(customer.total_spent)}
                       </td>
                     </tr>
@@ -210,8 +210,7 @@ function CustomersPage() {
 
       <Drawer
         open={Boolean(selectedCustomer)}
-        title={selectedCustomer?.name || "Customer details"}
-        description={selectedCustomer?.email}
+        title=""
         onClose={() => setSelectedCustomer(null)}
       >
         {selectedCustomer && (
@@ -220,7 +219,6 @@ function CustomersPage() {
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div className="min-w-0 flex-1">
                   <h3 className="break-words text-2xl font-bold text-brew-brown">{selectedCustomer.name}</h3>
-                  <p className="mt-1 break-all text-sm text-brew-roast">{selectedCustomer.email}</p>
                   <p className="mt-1 text-sm text-brew-roast">{selectedCustomer.city || "Not available"}</p>
                 </div>
                 <HealthBadge value={getCustomerHealth(selectedCustomer)} />

@@ -827,7 +827,12 @@ async def ai_draft_message(payload: DraftMessageRequest):
 async def root():
     return {"service": "BrewCo CRM", "status": "running", "version": "1.0.0"}
 
+from fastapi import Response
 
 @app.get("/health")
 async def health():
     return {"status": "healthy"}
+
+@app.head("/health")
+async def health_head():
+    return Response(status_code=200)

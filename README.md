@@ -4,7 +4,7 @@
 
 ---
 
-![Dashboard Preview](./screenshots/Dashboard1.png)
+![Dashboard Preview](./Screenshots/Dashboard1.png)
 
 ## 🚀 Live Demo
 
@@ -259,25 +259,25 @@ Model: **Llama 3.3 70B** via Groq
 ## 📸 Screenshots
 
 ### Authentication
-![Authentication](./screenshots/Authentication.png)
+![Authentication](./Screenshots/Authentication.png)
 
 ### Dashboard
-![Dashboard](./screenshots/Dashboard1.png)
+![Dashboard](./Screenshots/Dashboard1.png)
 
 ### Dashboard Analytics
-![Dashboard Analytics](./screenshots/Dashboard2.png)
+![Dashboard Analytics](./Screenshots/Dashboard2.png)
 
 ### Customers
-![Customers](./screenshots/Customers.png)
+![Customers](./Screenshots/Customers.png)
 
 ### Segments
-![Segments](./screenshots/Segments.png)
+![Segments](./Screenshots/Segments.png)
 
 ### Campaigns
-![Campaign Creation](./screenshots/Campaigns1.png)
+![Campaign Creation](./Screenshots/Campaigns1.png)
 
 ### Campaign Analytics
-![Campaign Analytics](./screenshots/Campaigns2.png)
+![Campaign Analytics](./Screenshots/Campaigns2.png)
 
 ## 👨‍💻 Author
 

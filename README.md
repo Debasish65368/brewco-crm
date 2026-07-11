@@ -98,7 +98,7 @@
 
 ## 📁 Project Structure
 
-```
+```text
 brewco-crm/
 ├── backend/
 │   ├── main.py            # FastAPI CRM service
@@ -117,9 +117,19 @@ brewco-crm/
 │   │   ├── services/      # Axios API clients
 │   │   ├── hooks/         # Custom React hooks
 │   │   └── layout/        # AppLayout, Sidebar
-│   ├── .env
+│   ├
 │   └── package.json
 │
+├── Screenshots/
+│   ├── Authentication.png
+│   ├── Dashboard1.png
+│   ├── Dashboard2.png
+│   ├── Customers.png
+│   ├── Segments.png
+│   ├── Campaigns1.png
+│   └── Campaigns2.png
+│
+├── .gitignore
 └── README.md
 ```
 

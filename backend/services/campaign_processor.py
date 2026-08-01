@@ -29,6 +29,7 @@ async def get_segment_customers(segment_id: int):
 
 async def process_campaign(campaign_id: int, segment_id: int, channel: str, message: str):
     conn = await get_connection()
+    tasks = []
     try:
         customers = await get_segment_customers(segment_id)
         for customer in customers:
@@ -39,7 +40,7 @@ async def process_campaign(campaign_id: int, segment_id: int, channel: str, mess
                 """,
                 campaign_id, customer["id"]
             )
-            asyncio.create_task(
+            task = asyncio.create_task(
                 send_to_channel_service(
                     campaign_id=campaign_id,
                     customer_id=customer["id"],
@@ -47,9 +48,12 @@ async def process_campaign(campaign_id: int, segment_id: int, channel: str, mess
                     message=message
                 )
             )
+            tasks.append(task)
         await conn.execute("UPDATE campaigns SET status = 'sent' WHERE id = $1", campaign_id)
     except Exception as e:
         print("Campaign Error:", str(e))
         await conn.execute("UPDATE campaigns SET status = 'failed' WHERE id = $1", campaign_id)
     finally:
         await release_connection(conn)
+        if tasks:
+            await asyncio.gather(*tasks, return_exceptions=True)

@@ -30,29 +30,7 @@ function formatDate(value) {
   }).format(new Date(value));
 }
 
-function getCustomerHealth(customer) {
-  const totalOrders = Number(customer.total_orders || 0);
-  const totalSpent = Number(customer.total_spent || 0);
-
-  if (totalOrders > 4 && totalSpent > 5000) {
-    return "VIP";
-  }
-
-  if (totalOrders === 0) {
-    return "At Risk";
-  }
-
-  if (customer.last_order_date) {
-    const lastOrder = new Date(customer.last_order_date);
-    const daysSinceLastOrder = (new Date().getTime() - lastOrder.getTime()) / (1000 * 60 * 60 * 24);
-
-    if (daysSinceLastOrder > 60) {
-      return "At Risk";
-    }
-  }
-
-  return "Active";
-}
+import { getCustomerHealth } from "@/utils/customerHealth";
 
 function HealthBadge({ value }) {
   const styles = {

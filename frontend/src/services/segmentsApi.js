@@ -11,3 +11,11 @@ export function createSegment(payload) {
 export function deleteSegment(segmentId) {
   return apiClient.delete(`/segments/${segmentId}`).then((response) => response.data);
 }
+
+export function getDiscoveredSegments() {
+  return apiClient.get("/segments/discovered").then((response) => response.data);
+}
+
+export function convertClusterToSegment(clusterId, payload) {
+  return apiClient.post(`/segments/discovered/${clusterId}/convert`, payload).then((response) => response.data);
+}

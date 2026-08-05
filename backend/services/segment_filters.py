@@ -9,6 +9,10 @@ def build_segment_sql(filter_json: Dict[str, Any]):
         clauses.append(f"city = ${len(values)+1}")
         values.append(filter_json["city"])
 
+    if "cluster_id" in filter_json:
+        clauses.append(f"cluster_id = ${len(values)+1}")
+        values.append(filter_json["cluster_id"])
+
     if "min_spent" in filter_json:
         clauses.append(f"total_spent >= ${len(values)+1}")
         values.append(filter_json["min_spent"])

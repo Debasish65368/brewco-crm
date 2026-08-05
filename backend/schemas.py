@@ -54,6 +54,11 @@ class SegmentCreate(BaseModel):
     filter_json: Dict[str, Any]
 
 
+class SegmentConvert(BaseModel):
+    name: str
+    description: Optional[str] = ""
+
+
 class SegmentResponse(BaseModel):
     id: int
     name: str

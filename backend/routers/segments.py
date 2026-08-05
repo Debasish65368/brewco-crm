@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from core.auth import verify_clerk_token
 from core.database import get_connection, release_connection
-from schemas import SegmentCreate
+from schemas import SegmentCreate, SegmentConvert
 from services.segment_filters import build_segment_sql
 
 router = APIRouter(tags=["segments"])
@@ -73,8 +73,8 @@ async def get_discovered_segments(user=Depends(verify_clerk_token)):
             SELECT 
                 cluster_id as id,
                 COUNT(*) as customer_count,
-                AVG(total_orders) as avg_orders,
-                AVG(total_spent) as avg_spent,
+                AVG(COALESCE(total_orders, 0)) as avg_orders,
+                AVG(COALESCE(total_spent, 0)) as avg_spent,
                 AVG(COALESCE(EXTRACT(DAY FROM (CURRENT_TIMESTAMP - last_order_date)), 999)) as avg_recency
             FROM customers 
             WHERE cluster_id IS NOT NULL 
@@ -96,7 +96,7 @@ async def get_discovered_segments(user=Depends(verify_clerk_token)):
 @router.post("/segments/discovered/{cluster_id}/convert")
 async def convert_cluster_to_segment(
     cluster_id: int,
-    payload: SegmentCreate,
+    payload: SegmentConvert,
     user=Depends(verify_clerk_token)
 ):
     """

@@ -29,6 +29,23 @@ async def dashboard_stats(
             "SELECT id, name, channel, status, created_at FROM campaigns ORDER BY created_at DESC LIMIT 5"
         )
 
+        recent_activity = await conn.fetch(
+            """
+            SELECT * FROM (
+                SELECT 'customer-' || id AS unique_id, id, name, created_at, 'customer' AS type 
+                FROM customers
+                UNION ALL
+                SELECT 'segment-' || id AS unique_id, id, name, created_at, 'segment' AS type 
+                FROM segments
+                UNION ALL
+                SELECT 'campaign-' || id AS unique_id, id, name, created_at, 'campaign' AS type 
+                FROM campaigns
+            ) sub
+            ORDER BY created_at DESC
+            LIMIT 8
+            """
+        )
+
         return {
             "total_customers": total_customers,
             "total_orders": total_orders,
@@ -41,7 +58,8 @@ async def dashboard_stats(
             "delivery_rate": delivery_rate,
             "open_rate": open_rate,
             "click_rate": click_rate,
-            "recent_campaigns": [dict(row) for row in recent_campaigns]
+            "recent_campaigns": [dict(row) for row in recent_campaigns],
+            "recent_activity": [dict(row) for row in recent_activity]
         }
     finally:
         await release_connection(conn)

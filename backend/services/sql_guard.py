@@ -44,8 +44,11 @@ def validate_sql(sql: str) -> tuple[bool, str]:
             return False, "Using '*' is not allowed. All columns must be explicitly specified."
             
         if re.search(r'\b(email|phone)\b', select_clause):
-            # Allow them strictly inside an aggregate function
-            if not re.search(r'(count|sum|avg|max|min)\s*\([^)]*\b(email|phone)\b[^)]*\)', select_clause):
-                return False, "Selecting email or phone columns directly is not allowed"
+            # Remove all valid COUNT(...) occurrences containing email or phone
+            cleaned_select = re.sub(r'\bcount\s*\([^)]*\b(?:email|phone)\b[^)]*\)', '', select_clause, flags=re.IGNORECASE)
+            
+            # If email or phone STILL appears, it's being used improperly (e.g. in STRING_AGG or directly)
+            if re.search(r'\b(email|phone)\b', cleaned_select):
+                return False, "Only COUNT() is allowed for email or phone columns."
 
     return True, "Valid SQL"

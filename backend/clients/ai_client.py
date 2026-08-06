@@ -74,7 +74,7 @@ You are ONLY permitted to reference the following tables and columns:
 - campaigns: id, name, channel, status, created_at
 - communications: campaign_id, customer_id, status
 
-CRITICAL RULE: Never select the `email` or `phone` columns directly. You may use them inside aggregate functions (e.g. COUNT(email)) or in WHERE clauses, but they must NEVER be returned as raw columns.
+CRITICAL RULE: Never select the `email` or `phone` columns directly. You may ONLY use them inside the COUNT() function (e.g. COUNT(email)) or in WHERE clauses. Do NOT use them in STRING_AGG, ARRAY_AGG, JSON_AGG, or any other aggregate function that returns raw values. They must NEVER be returned as raw columns or strings.
 CRITICAL RULE: Never use SELECT *. You must always list every column you want to return explicitly.
 """
     response = groq_client.chat.completions.create(

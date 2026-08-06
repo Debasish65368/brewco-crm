@@ -124,13 +124,13 @@ function getInitials(name = "") {
     .toUpperCase();
 }
 
-function AnimatedMetricCard({ metric, index }) {
+function AnimatedMetricCard({ metric, index, className = "" }) {
   const animatedValue = useCountUp(metric.rawValue, {
     formatter: metric.formatter || formatNumber
   });
 
   return (
-    <div className="dashboard-enter" style={{ animationDelay: `${index * 70}ms` }}>
+    <div className={`dashboard-enter ${className}`} style={{ animationDelay: `${index * 70}ms` }}>
       <MetricCard {...metric} value={animatedValue} />
     </div>
   );
@@ -431,7 +431,19 @@ function DashboardPage() {
     <div className="space-y-6">
       <PageHeader title="Dashboard" description="A quick read on BrewCo customer growth and campaign performance." />
 
-      <SectionCard title="Ask Your Data" icon={MessageSquare} className="w-full">
+      <div>
+        <section className="flex gap-4 overflow-x-auto pb-4 pt-1 snap-x scroll-smooth">
+          {metricCards.map((metric, index) => (
+            <AnimatedMetricCard 
+              key={metric.title} 
+              metric={metric} 
+              index={index} 
+              className="min-w-[260px] md:min-w-[280px] shrink-0 snap-start" 
+            />
+          ))}
+        </section>
+
+        <SectionCard title="Ask Your Data" icon={MessageSquare} className="w-full">
         <form onSubmit={handleAnalyticsSubmit} className="flex gap-3 mb-4">
           <input
             type="text"
@@ -498,10 +510,7 @@ function DashboardPage() {
           </div>
         )}
       </SectionCard>
-
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {metricCards.map((metric, index) => <AnimatedMetricCard key={metric.title} metric={metric} index={index} />)}
-      </section>
+      </div>
 
       <section className="grid grid-cols-1 gap-5 xl:grid-cols-12">
         <SectionCard title="Customers by city" icon={Users} className="xl:col-span-6" delay={120}>
@@ -550,50 +559,6 @@ function DashboardPage() {
               <CampaignFunnelAnchor stats={funnelCampaignStats || {}} />
             )}
           </SectionCard>
-
-          <SectionCard title="Customer reviews" icon={Star} delay={300}>
-            {customersLoading ? <LoadingSkeleton rows={4} /> : customerReviews.length ? (
-              <div className="scroll-container max-h-[482px] overflow-x-hidden overflow-y-auto pr-2 scroll-smooth">
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {customerReviews.map((review) => {
-                    const isSelected = selectedReviewId === review.id;
-
-                    return (
-                      <button
-                        key={review.id}
-                        type="button"
-                        onClick={() => setSelectedReviewId(review.id)}
-                        className={`min-h-[146px] rounded-lg border bg-brew-cream p-3 text-left transition duration-200 ease-out hover:border-brew-amber/40 hover:bg-white hover:shadow-sm ${
-                          isSelected ? "row--selected shadow-md" : "border-brew-brown/10 shadow-none"
-                        }`}
-                      >
-                        <div className="flex items-start gap-3">
-                          <div className={`grid h-10 w-10 shrink-0 place-items-center rounded-full text-sm font-semibold ${review.avatarClassName}`}>
-                            {review.initials}
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm font-semibold text-brew-brown">{review.name}</p>
-                            <div className="mt-1 flex items-center gap-0.5 text-brew-amber">
-                              {Array.from({ length: 5 }).map((_, index) => (
-                                <Star
-                                  key={index}
-                                  size={13}
-                                  className={index < review.rating ? "fill-current" : "text-brew-brown/20"}
-                                />
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-                        <p className="mt-3 text-sm leading-5 text-brew-roast">"{review.quote}"</p>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            ) : (
-              <EmptyState icon={Star} title="No customer reviews yet" description="Reviews will use top customer names when customer data is available." />
-            )}
-          </SectionCard>
         </div>
 
         <div className="grid gap-5 xl:col-span-5">
@@ -629,29 +594,74 @@ function DashboardPage() {
               </div>
             ) : <EmptyState icon={Users} title="No top customers yet" description="Top spenders will appear when customer spend data is available." />}
           </SectionCard>
-
-          <SectionCard title="Recent activity" icon={Activity} delay={360}>
-            {customersLoading ? <LoadingSkeleton rows={4} /> : recentActivity.length ? (
-              <div className="scroll-container max-h-[482px] space-y-2 overflow-x-hidden overflow-y-auto pr-2 scroll-smooth">
-                {recentActivity.map((activity, index) => (
-                  <button
-                    key={activity.id}
-                    type="button"
-                    onClick={() => setSelectedActivityId(activity.id)}
-                    className={`dashboard-enter flex w-full items-start gap-3 rounded-lg border bg-brew-cream p-3 text-left transition duration-200 ease-out hover:border-brew-amber/40 hover:bg-white hover:shadow-sm ${
-                      selectedActivityId === activity.id ? "row--selected shadow-md" : "border-brew-brown/10 shadow-none"
-                    }`}
-                    style={{ animationDelay: `${420 + index * 80}ms` }}
-                  >
-                    <div className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-full bg-brew-amber/15 text-brew-amber"><CalendarClock size={17} /></div>
-                    <div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><p className="truncate text-sm font-semibold text-brew-brown">{activity.label}</p><span className="rounded-full bg-white px-2 py-0.5 text-xs font-medium text-brew-roast ring-1 ring-brew-brown/10">{activity.type}</span></div><p className="mt-1 text-sm text-brew-roast">{activity.meta}</p><p className="mt-1 text-xs text-brew-roast/75">{formatDate(activity.date)}</p></div>
-                  </button>
-                ))}
-              </div>
-            ) : <EmptyState icon={Activity} title="No recent activity available" description="The current customer and campaign records do not expose enough dated activity yet." />}
-          </SectionCard>
-
         </div>
+      </section>
+
+      <section className="grid grid-cols-1 items-start gap-5 xl:grid-cols-12">
+        <SectionCard title="Recent activity" icon={Activity} delay={360} className="xl:col-span-6">
+          {customersLoading ? <LoadingSkeleton rows={4} /> : recentActivity.length ? (
+            <div className="scroll-container h-[420px] overflow-x-hidden overflow-y-auto pr-2 scroll-smooth snap-y snap-mandatory flex flex-col gap-3">
+              {recentActivity.map((activity, index) => (
+                <button
+                  key={activity.id}
+                  type="button"
+                  onClick={() => setSelectedActivityId(activity.id)}
+                  className={`dashboard-enter flex w-full h-[132px] shrink-0 snap-start items-start gap-3 rounded-lg border bg-brew-cream p-4 text-left transition duration-200 ease-out hover:border-brew-amber/40 hover:bg-white hover:shadow-sm ${
+                    selectedActivityId === activity.id ? "row--selected shadow-md" : "border-brew-brown/10 shadow-none"
+                  }`}
+                  style={{ animationDelay: `${420 + index * 80}ms` }}
+                >
+                  <div className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-full bg-brew-amber/15 text-brew-amber"><CalendarClock size={17} /></div>
+                  <div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><p className="truncate text-sm font-semibold text-brew-brown">{activity.label}</p><span className="rounded-full bg-white px-2 py-0.5 text-xs font-medium text-brew-roast ring-1 ring-brew-brown/10">{activity.type}</span></div><p className="mt-1 text-sm text-brew-roast">{activity.meta}</p><p className="mt-1 text-xs text-brew-roast/75">{formatDate(activity.date)}</p></div>
+                </button>
+              ))}
+            </div>
+          ) : <EmptyState icon={Activity} title="No recent activity available" description="The current customer and campaign records do not expose enough dated activity yet." />}
+        </SectionCard>
+
+        <SectionCard title="Customer reviews" icon={Star} delay={420} className="xl:col-span-6">
+          {customersLoading ? <LoadingSkeleton rows={4} /> : customerReviews.length ? (
+            <div className="scroll-container h-[420px] overflow-x-hidden overflow-y-auto pr-2 scroll-smooth snap-y snap-mandatory">
+              <div className="grid gap-4 sm:grid-cols-2">
+                {customerReviews.map((review) => {
+                  const isSelected = selectedReviewId === review.id;
+
+                  return (
+                    <button
+                      key={review.id}
+                      type="button"
+                      onClick={() => setSelectedReviewId(review.id)}
+                      className={`h-[202px] shrink-0 snap-start rounded-lg border bg-brew-cream p-4 text-left transition duration-200 ease-out hover:border-brew-amber/40 hover:bg-white hover:shadow-sm ${
+                        isSelected ? "row--selected shadow-md" : "border-brew-brown/10 shadow-none"
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className={`grid h-10 w-10 shrink-0 place-items-center rounded-full text-sm font-semibold ${review.avatarClassName}`}>
+                          {review.initials}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-semibold text-brew-brown">{review.name}</p>
+                          <div className="mt-1 flex items-center gap-0.5 text-brew-amber">
+                            {Array.from({ length: 5 }).map((_, index) => (
+                              <Star
+                                key={index}
+                                size={13}
+                                className={index < review.rating ? "fill-current" : "text-brew-brown/20"}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                      <p className="mt-3 text-sm leading-5 text-brew-roast">"{review.quote}"</p>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            <EmptyState icon={Star} title="No customer reviews yet" description="Reviews will use top customer names when customer data is available." />
+          )}
+        </SectionCard>
       </section>
     </div>
   );

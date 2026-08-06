@@ -56,3 +56,51 @@ Requirements:
         messages=[{"role": "user", "content": prompt}]
     )
     return response.choices[0].message.content.strip()
+
+
+async def generate_analytics_sql(question: str) -> str:
+    prompt = f"""
+You are an expert SQL assistant. Convert the following natural language question into a PostgreSQL query.
+
+Question:
+{question}
+
+Return ONLY a single read-only SQL SELECT statement. No markdown, no explanation, no semicolons.
+
+You are ONLY permitted to reference the following tables and columns:
+- customers: id, name, email, phone, city, total_orders, total_spent, last_order_date, churn_score, cluster_id
+- orders: id, customer_id, amount, created_at
+- segments: id, name, customer_count, created_at
+- campaigns: id, name, channel, status, created_at
+- communications: campaign_id, customer_id, status
+
+CRITICAL RULE: Never select the `email` or `phone` columns directly. You may use them inside aggregate functions (e.g. COUNT(email)) or in WHERE clauses, but they must NEVER be returned as raw columns.
+CRITICAL RULE: Never use SELECT *. You must always list every column you want to return explicitly.
+"""
+    response = groq_client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        messages=[{"role": "user", "content": prompt}]
+    )
+    text = response.choices[0].message.content.strip()
+    if text.startswith("```"):
+        text = text.split("```")[1]
+        if text.lower().startswith("sql"):
+            text = text[3:]
+    return text.strip()
+
+
+async def generate_sql_summary(question: str, data: list) -> str:
+    prompt = f"""
+You are a data analyst for a coffee shop CRM.
+
+A user asked this question: "{question}"
+And the database returned this data:
+{json.dumps(data, default=str)}
+
+Provide a very short, plain-English summary of what this data means (under 300 characters). Don't explain how you got it, just give the insight.
+"""
+    response = groq_client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        messages=[{"role": "user", "content": prompt}]
+    )
+    return response.choices[0].message.content.strip()

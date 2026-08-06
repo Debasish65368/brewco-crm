@@ -3,7 +3,9 @@ import {
   Activity,
   BarChart3,
   CalendarClock,
+  Loader2,
   MailCheck,
+  MessageSquare,
   MousePointerClick,
   PackageCheck,
   ReceiptText,
@@ -30,6 +32,7 @@ import PageHeader from "@/layout/PageHeader";
 import { useCustomers } from "@/hooks/useCustomers";
 import { useDashboard } from "@/hooks/useDashboard";
 import { getRevenueTrend } from "@/services/dashboardApi";
+import { getAnalyticsAnswer } from "@/services/analyticsApi";
 
 const currencyFormatter = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -239,6 +242,29 @@ function DashboardPage() {
   const [selectedActivityId, setSelectedActivityId] = useState(null);
   const [selectedReviewId, setSelectedReviewId] = useState(null);
 
+  const [analyticsQuestion, setAnalyticsQuestion] = useState("");
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
+  const [analyticsResult, setAnalyticsResult] = useState(null);
+  const [analyticsError, setAnalyticsError] = useState(null);
+
+  const handleAnalyticsSubmit = async (e) => {
+    e.preventDefault();
+    if (!analyticsQuestion.trim()) return;
+    
+    setAnalyticsLoading(true);
+    setAnalyticsError(null);
+    setAnalyticsResult(null);
+    
+    try {
+      const data = await getAnalyticsAnswer(analyticsQuestion);
+      setAnalyticsResult(data);
+    } catch (err) {
+      setAnalyticsError(err.message);
+    } finally {
+      setAnalyticsLoading(false);
+    }
+  };
+
   const fetchRevenueTrend = async () => {
     setRevenueLoading(true);
     setRevenueError(null);
@@ -378,6 +404,74 @@ function DashboardPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="Dashboard" description="A quick read on BrewCo customer growth and campaign performance." />
+
+      <SectionCard title="Ask Your Data" icon={MessageSquare} className="w-full">
+        <form onSubmit={handleAnalyticsSubmit} className="flex gap-3 mb-4">
+          <input
+            type="text"
+            value={analyticsQuestion}
+            onChange={(e) => setAnalyticsQuestion(e.target.value)}
+            placeholder="e.g. Which city has the highest average churn score?"
+            className="flex-1 rounded-md border-0 py-2.5 px-3 text-brew-brown shadow-sm ring-1 ring-inset ring-brew-brown/20 focus:ring-2 focus:ring-inset focus:ring-brew-amber sm:text-sm sm:leading-6 bg-white"
+            disabled={analyticsLoading}
+          />
+          <button
+            type="submit"
+            disabled={analyticsLoading || !analyticsQuestion.trim()}
+            className="inline-flex items-center gap-2 rounded-md bg-brew-brown px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-brew-roast focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brew-brown disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {analyticsLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageSquare className="h-4 w-4" />}
+            Ask
+          </button>
+        </form>
+
+        {analyticsError && (
+          <div className="rounded-md bg-red-50 p-4 mb-4 ring-1 ring-red-200">
+            <p className="text-sm text-red-800">{analyticsError}</p>
+          </div>
+        )}
+
+        {analyticsResult && (
+          <div className="space-y-4">
+            {analyticsResult.summary && (
+              <div className="rounded-md bg-brew-sage/10 p-4 ring-1 ring-brew-sage/30">
+                <p className="text-sm font-medium text-brew-roast">
+                  {analyticsResult.summary}
+                </p>
+              </div>
+            )}
+            
+            {analyticsResult.results && analyticsResult.results.length > 0 ? (
+              <div className="overflow-x-auto rounded-lg ring-1 ring-brew-brown/10">
+                <table className="min-w-full divide-y divide-brew-brown/10">
+                  <thead className="bg-brew-foam">
+                    <tr>
+                      {Object.keys(analyticsResult.results[0]).map((key) => (
+                        <th key={key} scope="col" className="px-4 py-3 text-left text-xs font-semibold text-brew-roast uppercase tracking-wider">
+                          {key}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-brew-brown/10 bg-white">
+                    {analyticsResult.results.map((row, idx) => (
+                      <tr key={idx}>
+                        {Object.values(row).map((val, cellIdx) => (
+                          <td key={cellIdx} className="whitespace-nowrap px-4 py-3 text-sm text-brew-brown">
+                            {val !== null ? String(val) : "null"}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="text-sm text-brew-roast italic">No results found for this query.</div>
+            )}
+          </div>
+        )}
+      </SectionCard>
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {metricCards.map((metric, index) => <AnimatedMetricCard key={metric.title} metric={metric} index={index} />)}

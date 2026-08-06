@@ -31,6 +31,8 @@ import MetricCard from "@/components/common/MetricCard";
 import PageHeader from "@/layout/PageHeader";
 import { useCustomers } from "@/hooks/useCustomers";
 import { useDashboard } from "@/hooks/useDashboard";
+import { useCampaigns } from "@/hooks/useCampaigns";
+import { useCampaignStats } from "@/hooks/useCampaignStats";
 import { getRevenueTrend } from "@/services/dashboardApi";
 import { getAnalyticsAnswer } from "@/services/analyticsApi";
 
@@ -134,15 +136,18 @@ function AnimatedMetricCard({ metric, index }) {
   );
 }
 
-function SectionCard({ title, icon: Icon, children, className = "", bodyClassName = "", delay = 0 }) {
+function SectionCard({ title, icon: Icon, children, action, className = "", bodyClassName = "", delay = 0 }) {
   return (
     <section
       className={`dashboard-enter dashboard-hover rounded-lg border border-brew-brown/10 bg-brew-foam p-5 shadow-sm ${className}`}
       style={{ animationDelay: `${delay}ms` }}
     >
-      <div className="mb-4 flex items-center gap-2">
-        {Icon && <Icon className="h-5 w-5 text-brew-amber" />}
-        <h2 className="text-base font-semibold text-brew-brown">{title}</h2>
+      <div className="mb-4 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          {Icon && <Icon className="h-5 w-5 text-brew-amber" />}
+          <h2 className="text-base font-semibold text-brew-brown">{title}</h2>
+        </div>
+        {action && <div>{action}</div>}
       </div>
       <div className={bodyClassName}>{children}</div>
     </section>
@@ -235,12 +240,23 @@ function CampaignFunnelAnchor({ stats }) {
 function DashboardPage() {
   const { data, loading, error, refetch } = useDashboard();
   const { data: customers, loading: customersLoading, error: customersError, refetch: refetchCustomers } = useCustomers();
+  const { data: allCampaigns } = useCampaigns();
+  
   const [revenueTrend, setRevenueTrend] = useState([]);
   const [revenueLoading, setRevenueLoading] = useState(true);
   const [revenueError, setRevenueError] = useState(null);
   const [selectedTopCustomerId, setSelectedTopCustomerId] = useState(null);
   const [selectedActivityId, setSelectedActivityId] = useState(null);
   const [selectedReviewId, setSelectedReviewId] = useState(null);
+  const [selectedFunnelCampaignId, setSelectedFunnelCampaignId] = useState(null);
+  
+  const { data: funnelCampaignStats, loading: funnelStatsLoading } = useCampaignStats(selectedFunnelCampaignId);
+
+  useEffect(() => {
+    if (allCampaigns?.length > 0 && !selectedFunnelCampaignId) {
+      setSelectedFunnelCampaignId(allCampaigns[0].id);
+    }
+  }, [allCampaigns, selectedFunnelCampaignId]);
 
   const [analyticsQuestion, setAnalyticsQuestion] = useState("");
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
@@ -347,29 +363,39 @@ function DashboardPage() {
   }, [topCustomers]);
 
   const recentActivity = useMemo(() => {
-    const activity = [];
-    const sent = Number(data?.sent || 0);
-    const delivered = Number(data?.delivered || 0);
-    const deliveryRate = sent > 0 ? (delivered / sent) * 100 : 0;
-
-    if (sent > 0) {
-      activity.push({ id: "delivery-summary", label: "Campaign delivery", meta: `Sent to ${formatNumber(sent)} customers · ${formatRate(deliveryRate)} delivered`, type: "Campaign", date: data?.recent_campaigns?.[0]?.created_at });
-    }
-
-    const oneWeekAgo = new Date();
-    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-    const newThisWeek = customers.filter((customer) => customer.created_at && new Date(customer.created_at) >= oneWeekAgo).length;
-
-    if (newThisWeek > 0) {
-      activity.push({ id: "new-customers-week", label: "New customers", meta: `${formatNumber(newThisWeek)} new customers joined this week`, type: "Customers", date: new Date().toISOString() });
-    }
-
-    (data?.recent_campaigns || []).slice(0, 3).forEach((campaign) => {
-      activity.push({ id: `campaign-${campaign.id}`, label: campaign.name, meta: `${campaign.channel || "Campaign"} campaign · ${campaign.status || "status unavailable"}`, type: "Campaign", date: campaign.created_at });
+    if (!data?.recent_activity) return [];
+    
+    return data.recent_activity.map(activity => {
+      let label = "";
+      let meta = "";
+      
+      switch (activity.type) {
+        case "customer":
+          label = `New customer joined`;
+          meta = `${activity.name} became a customer`;
+          break;
+        case "segment":
+          label = `New segment created`;
+          meta = `Segment '${activity.name}' was created`;
+          break;
+        case "campaign":
+          label = `New campaign launched`;
+          meta = `Campaign '${activity.name}' was created`;
+          break;
+        default:
+          label = `Activity`;
+          meta = activity.name;
+      }
+      
+      return {
+        id: activity.unique_id,
+        label,
+        meta,
+        type: activity.type.charAt(0).toUpperCase() + activity.type.slice(1),
+        date: activity.created_at
+      };
     });
-
-    return activity.sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime()).slice(0, 5);
-  }, [customers, data]);
+  }, [data]);
 
   if (loading) {
     return (
@@ -399,7 +425,7 @@ function DashboardPage() {
     { title: "Click rate", rawValue: data.click_rate, formatter: formatRate, description: `${formatNumber(data.clicked)} clicks recorded`, icon: MousePointerClick, tone: "sage" }
   ];
 
-  const funnelStats = { sent: data.sent, delivered: data.delivered, opened: data.opened, clicked: data.clicked };
+  // Aggregate stats not needed for the funnel anymore since we fetch individual campaign stats
 
   return (
     <div className="space-y-6">
@@ -498,8 +524,31 @@ function DashboardPage() {
 
       <section className="grid grid-cols-1 items-start gap-5 xl:grid-cols-12">
         <div className="grid gap-5 xl:col-span-7">
-          <SectionCard title="Campaign funnel" icon={BarChart3} className="self-start" bodyClassName="pb-0" delay={240}>
-            <CampaignFunnelAnchor stats={funnelStats} />
+          <SectionCard 
+            title="Campaign funnel" 
+            icon={BarChart3} 
+            className="self-start" 
+            bodyClassName="pb-0" 
+            delay={240}
+            action={
+              <select
+                className="block w-[200px] truncate rounded-md border-0 bg-brew-brown py-2 pl-3 pr-8 text-brew-foam shadow-sm focus:ring-2 focus:ring-inset focus:ring-brew-amber sm:text-sm"
+                value={selectedFunnelCampaignId || ""}
+                onChange={(e) => setSelectedFunnelCampaignId(Number(e.target.value))}
+                disabled={!allCampaigns?.length}
+                title={allCampaigns?.find(c => c.id === selectedFunnelCampaignId)?.name || ""}
+              >
+                {allCampaigns?.map(c => (
+                  <option key={c.id} value={c.id} title={c.name}>{c.name}</option>
+                ))}
+              </select>
+            }
+          >
+            {funnelStatsLoading ? (
+              <div className="pb-5 pt-2 space-y-4"><LoadingSkeleton rows={4} /></div>
+            ) : (
+              <CampaignFunnelAnchor stats={funnelCampaignStats || {}} />
+            )}
           </SectionCard>
 
           <SectionCard title="Customer reviews" icon={Star} delay={300}>
@@ -583,7 +632,7 @@ function DashboardPage() {
 
           <SectionCard title="Recent activity" icon={Activity} delay={360}>
             {customersLoading ? <LoadingSkeleton rows={4} /> : recentActivity.length ? (
-              <div className="space-y-2">
+              <div className="scroll-container max-h-[482px] space-y-2 overflow-x-hidden overflow-y-auto pr-2 scroll-smooth">
                 {recentActivity.map((activity, index) => (
                   <button
                     key={activity.id}

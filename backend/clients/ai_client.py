@@ -24,7 +24,7 @@ Example:
 Supported fields: min_spent, max_spent, min_orders, city, last_order_before
 """
     response = groq_client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
+        model="openai/gpt-oss-120b",
         messages=[{"role": "user", "content": full_prompt}]
     )
     text = response.choices[0].message.content.strip()
@@ -52,7 +52,7 @@ Requirements:
 - Include a call to action
 """
     response = groq_client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
+        model="openai/gpt-oss-120b",
         messages=[{"role": "user", "content": prompt}]
     )
     return response.choices[0].message.content.strip()
@@ -78,7 +78,7 @@ CRITICAL RULE: Never select the `email` or `phone` columns directly. You may ONL
 CRITICAL RULE: Never use SELECT *. You must always list every column you want to return explicitly.
 """
     response = groq_client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
+        model="openai/gpt-oss-120b",
         messages=[{"role": "user", "content": prompt}]
     )
     text = response.choices[0].message.content.strip()
@@ -100,7 +100,7 @@ And the database returned this data:
 Provide a very short, plain-English summary of what this data means (under 300 characters). Don't explain how you got it, just give the insight.
 """
     response = groq_client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
+        model="openai/gpt-oss-120b",
         messages=[{"role": "user", "content": prompt}]
     )
     return response.choices[0].message.content.strip()

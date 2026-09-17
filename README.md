@@ -488,10 +488,10 @@ VITE_CLERK_PUBLISHABLE_KEY=
 ![Authentication](Screenshots/Authentication.png)
 
 **Dashboard**
-![Dashboard](Screenshots/dashboard1.png)
+![Dashboard](Screenshots/Dashboard1.png)
 
 **Dashboard — Ask Your Data & Analytics**
-![Dashboard Analytics](Screenshots/dashboard2.png)
+![Dashboard Analytics](Screenshots/Dashboard2.png)
 
 **Customers**
 ![Customers](Screenshots/customer1.png)
@@ -500,10 +500,10 @@ VITE_CLERK_PUBLISHABLE_KEY=
 ![Segments](Screenshots/segments1.png)
 
 **Campaigns**
-![Campaign Creation](Screenshots/campaigns1.png)
+![Campaign Creation](Screenshots/Campaigns1.png)
 
 **Campaign Analytics**
-![Campaign Analytics](Screenshots/campaigns2.png)
+![Campaign Analytics](Screenshots/Campaigns2.png)
 
 ---
 

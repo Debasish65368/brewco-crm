@@ -65,48 +65,90 @@ At its core it answers three questions a coffee brand actually has:
 flowchart TB
     User(["👤 User"])
 
-    subgraph Vercel["▲ Vercel"]
-        FE["React + Vite + Tailwind\nAxios API client"]
+    subgraph FE["▲ Vercel — React + Vite + Tailwind"]
+        direction TB
+        Pages["Pages: Dashboard · Customers ·\nSegments · Campaigns"]
+        Hooks["hooks/: useCustomers ·\nuseCampaigns · useDashboard"]
+        Axios["Axios API client\nattaches Authorization: Bearer JWT"]
+        Pages --> Hooks --> Axios
     end
 
-    subgraph Clerk["🔐 Clerk"]
-        Auth["Google OAuth / Email OTP\nissues JWT"]
+    subgraph ClerkBox["🔐 Clerk"]
+        direction TB
+        OAuth["Google OAuth / Email OTP"]
+        Issue["Issues signed JWT (RS256)"]
+        JWKS[("Public JWKS endpoint\nsigning keys")]
+        OAuth --> Issue
     end
 
-    subgraph Render1["☁️ Render — CRM Service"]
-        API["FastAPI Backend\nrouters: customers · segments ·\ncampaigns · dashboard · ai · analytics"]
-        Guard["sql_guard.py\nPII / injection validator"]
-        ML["Churn + RFM models\n(scikit-learn, .pkl)"]
-        API --> Guard
-        API --> ML
+    subgraph CRM["☁️ Render — CRM Service  (backend/)"]
+        direction TB
+        Main["main.py\nFastAPI app + router registration"]
+        AuthGate{"core/auth.py\nverify_clerk_token()\nJWT valid?"}
+        Deny401["401 Unauthorized"]
+
+        subgraph Routers["routers/"]
+            direction LR
+            RCust["customers"]
+            ROrd["orders"]
+            RSeg["segments"]
+            RCamp["campaigns"]
+            RDash["dashboard"]
+            RAI["ai"]
+            RAnalytics["analytics"]
+        end
+
+        DBPool["core/database.py\nasyncpg pool + lifespan"]
+        Guard["services/sql_guard.py\n5-check SQL validator"]
+        Processor["services/campaign_processor.py\nsegment → customers → dispatch"]
+        SegFilter["services/segment_filters.py\nfilter_json → parameterized WHERE"]
+        AIClient["clients/ai_client.py\nsegmentation · drafting ·\nNL→SQL · summary"]
+        ChannelClient["clients/channel_client.py"]
+        Models[("models/\nchurn_model.pkl\nrfm_model.pkl + rfm_scaler.pkl")]
+
+        Main --> AuthGate
+        AuthGate -- "valid" --> Routers
+        AuthGate -- "missing / expired /\nbad signature" --> Deny401
+        RCust & ROrd & RSeg --> DBPool
+        RSeg --> SegFilter
+        RCamp --> Processor
+        RAI & RAnalytics --> AIClient
+        RAnalytics --> Guard
+        RDash --> Models
+        Processor --> ChannelClient
     end
 
-    subgraph Render2["☁️ Render — Channel Service"]
-        CS["Delivery Simulator\nasync lifecycle: sent → delivered\n→ opened → clicked"]
+    subgraph CS["☁️ Render — Channel Service  (channel-service/)"]
+        direction TB
+        Sim["main.py — async delivery simulator"]
+        Lifecycle["sent → delivered (80%) or failed (20%)\n→ opened (60% of delivered)\n→ clicked (30% of opened)"]
+        Sim --> Lifecycle
     end
 
     DB[("🐘 Neon PostgreSQL\ncustomers · orders · segments\ncampaigns · communications")]
-    Groq["🧠 Groq API\nLlama 3.3 / gpt-oss-120b"]
+    Groq["🧠 Groq API\nllama-3.3 / gpt-oss-120b"]
 
     User --> FE
-    FE -- "1. Sign in" --> Auth
-    Auth -- "2. JWT" --> FE
-    FE -- "3. Bearer JWT" --> API
-    API -- "verify via JWKS" --> Auth
-    API <--> DB
-    API -- "segmentation · messages ·\nNL→SQL" --> Groq
-    API -- "4. dispatch campaign" --> CS
-    CS -- "5. receipt callbacks\nPOST /receipt" --> API
+    FE -- "1. Sign in" --> ClerkBox
+    ClerkBox -- "2. JWT" --> FE
+    FE -- "3. Bearer JWT" --> Main
+    AuthGate -. "fetch signing key\n(PyJWKClient, cached)" .-> JWKS
+    DBPool <--> DB
+    Guard --> DB
+    AIClient <--> Groq
+    ChannelClient -- "4. dispatch" --> Sim
+    Lifecycle -- "5. POST /receipt" --> Main
 
-    style FE fill:#0d1117,color:#fff,stroke:#61DAFB
-    style API fill:#0d1117,color:#fff,stroke:#009688
-    style CS fill:#0d1117,color:#fff,stroke:#f97316
-    style DB fill:#336791,color:#fff,stroke:#60a5fa
+    style AuthGate fill:#7c2d12,color:#fff,stroke:#f97316
+    style Deny401 fill:#450a0a,color:#fff,stroke:#dc2626
+    style Guard fill:#3b0764,color:#fff,stroke:#8A2BE2
     style Groq fill:#1f2937,color:#fff,stroke:#F55036
-    style Auth fill:#1f2937,color:#fff,stroke:#6C47FF
+    style DB fill:#336791,color:#fff,stroke:#60a5fa
+    style Models fill:#0d1117,color:#fff,stroke:#F7931E
+    style JWKS fill:#1f2937,color:#fff,stroke:#6C47FF
 ```
 
-Two independently-deployed FastAPI services, one shared Postgres database, and an LLM in the loop for three distinct, guarded features — not one monolith pretending to be a platform.
+Two independently-deployed FastAPI services, one shared Postgres database, and an LLM in the loop for three distinct, guarded features — not one monolith pretending to be a platform. Every protected route funnels through the same `verify_clerk_token()` gate before it ever reaches a router; only `/receipt` and `/health` bypass it, since those are called machine-to-machine by the channel service, not by a signed-in browser session.
 
 ---
 
@@ -177,17 +219,18 @@ sequenceDiagram
     participant U as User
     participant FE as React App
     participant Clerk as Clerk
-    participant API as FastAPI Backend
+    participant API as FastAPI (core/auth.py)
 
     U->>FE: Click "Continue with Google"
     FE->>Clerk: OAuth sign-in
     Clerk-->>FE: JWT (RS256)
     FE->>API: Any protected request\nAuthorization: Bearer <JWT>
-    API->>API: PyJWKClient fetches signing key\nfrom Clerk's JWKS URL
+    API->>Clerk: PyJWKClient fetches signing key\nfrom Clerk's JWKS URL (cached)
+    Clerk-->>API: public signing key
     API->>API: jwt.decode(token, key, algorithms=["RS256"])
     alt token valid
         API-->>FE: 200 + protected data
-    else missing / malformed / expired
+    else missing / malformed / expired / bad signature
         API-->>FE: 401 Unauthorized
     end
 ```
@@ -235,26 +278,45 @@ The channel service models a realistic funnel — not every send is delivered, n
 ## 🔎 Ask Your Data — NL-to-SQL Pipeline
 
 ```mermaid
-flowchart LR
-    Q["💬 'Which city has the\nhighest average churn score?'"]
+flowchart TB
+    Q["💬 Natural language question\n'Which city has the highest\naverage churn score?'"]
     LLM1["🧠 Groq LLM\ngenerate_analytics_sql()"]
-    SQL["Generated SQL"]
-    Guard{"🛡️ sql_guard.py"}
-    DB[("PostgreSQL")]
+    SQL["Generated SQL string"]
+
+    C1{"Starts with\nSELECT?"}
+    C2{"No semicolons?\n(blocks multi-statement\ninjection)"}
+    C3{"No write keywords?\nINSERT · UPDATE · DELETE\nDROP · ALTER · ..."}
+    C4{"Only whitelisted tables?\ncustomers · orders · segments\ncampaigns · communications"}
+    C5{"No bare * outside COUNT(*)?\nemail/phone only inside\nCOUNT(), never STRING_AGG\nor ARRAY_AGG?"}
+
+    Reject["❌ 400 Bad Request\nrejected — never executed\nagainst the database"]
+    DB[("PostgreSQL\nLIMIT 100 safety net")]
     LLM2["🧠 Groq LLM\ngenerate_sql_summary()"]
     A["📝 Plain-English answer"]
-    Reject["❌ 400 — rejected,\nnever executed"]
 
-    Q --> LLM1 --> SQL --> Guard
-    Guard -- "passes 5 checks" --> DB --> LLM2 --> A
-    Guard -- "fails any check" --> Reject
+    Q --> LLM1 --> SQL --> C1
+    C1 -- yes --> C2
+    C1 -- no --> Reject
+    C2 -- yes --> C3
+    C2 -- no --> Reject
+    C3 -- yes --> C4
+    C3 -- no --> Reject
+    C4 -- yes --> C5
+    C4 -- no --> Reject
+    C5 -- yes --> DB
+    C5 -- no --> Reject
+    DB --> LLM2 --> A
 
-    style Guard fill:#7c2d12,color:#fff,stroke:#f97316
     style Reject fill:#450a0a,color:#fff,stroke:#dc2626
     style A fill:#052e16,color:#fff,stroke:#22c55e
+    style C1 fill:#7c2d12,color:#fff,stroke:#f97316
+    style C2 fill:#7c2d12,color:#fff,stroke:#f97316
+    style C3 fill:#7c2d12,color:#fff,stroke:#f97316
+    style C4 fill:#7c2d12,color:#fff,stroke:#f97316
+    style C5 fill:#7c2d12,color:#fff,stroke:#f97316
 ```
 
-`sql_guard.py` validates every LLM-generated query against **five independent checks** before it ever touches the database: must start with `SELECT`, no semicolons (blocks multi-statement injection), no `INSERT/UPDATE/DELETE/DROP/ALTER/...` keywords, only whitelisted tables (`customers`, `orders`, `segments`, `campaigns`, `communications`), and — the one that took two iterations to get right — no raw exposure of `email`/`phone`. See below.
+`sql_guard.py` runs these **five checks in sequence** — the query is rejected the moment any single one fails, and none of the later checks ever see it. The last check (`C5`) is the one that took two iterations to get right in development — see below.
 
 ---
 

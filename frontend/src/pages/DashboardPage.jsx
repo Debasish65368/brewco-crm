@@ -247,7 +247,6 @@ function DashboardPage() {
   const [revenueError, setRevenueError] = useState(null);
   const [selectedTopCustomerId, setSelectedTopCustomerId] = useState(null);
   const [selectedActivityId, setSelectedActivityId] = useState(null);
-  const [selectedReviewId, setSelectedReviewId] = useState(null);
   const [selectedFunnelCampaignId, setSelectedFunnelCampaignId] = useState(null);
   
   const { data: funnelCampaignStats, loading: funnelStatsLoading } = useCampaignStats(selectedFunnelCampaignId);
@@ -328,7 +327,7 @@ function DashboardPage() {
 
   const topCustomers = useMemo(() => [...customers].sort((a, b) => Number(b.total_spent || 0) - Number(a.total_spent || 0)).slice(0, 10), [customers]);
 
-  const customerReviews = useMemo(() => {
+  const sampleFeedback = useMemo(() => {
     const quotes = [
       "Best coffee subscription I have tried. The deliveries are quick and the roast is always fresh.",
       "BrewCo makes it easy to keep my pantry stocked. The flavor has been consistent every single order.",
@@ -355,15 +354,15 @@ function DashboardPage() {
       "bg-brew-roast/80 text-brew-foam"
     ];
 
-    return topCustomers.slice(0, 10).map((customer, index) => ({
-      id: customer.id,
-      name: customer.name,
-      quote: quotes[index],
+    return quotes.map((quote, index) => ({
+      id: `sample-${index}`,
+      name: "Sample customer",
+      quote: quote,
       rating: ratings[index],
-      initials: getInitials(customer.name),
+      initials: "SC",
       avatarClassName: avatarStyles[index]
     }));
-  }, [topCustomers]);
+  }, []);
 
   const recentActivity = useMemo(() => {
     if (!data?.recent_activity) return [];
@@ -622,48 +621,38 @@ function DashboardPage() {
           ) : <EmptyState icon={Activity} title="No recent activity available" description="The current customer and campaign records do not expose enough dated activity yet." />}
         </SectionCard>
 
-        <SectionCard title="Customer reviews" icon={Star} delay={420} className="xl:col-span-6">
-          {customersLoading ? <LoadingSkeleton rows={4} /> : customerReviews.length ? (
-            <div className="scroll-container h-[420px] overflow-x-hidden overflow-y-auto pr-2 scroll-smooth snap-y snap-mandatory">
-              <div className="grid gap-4 sm:grid-cols-2">
-                {customerReviews.map((review) => {
-                  const isSelected = selectedReviewId === review.id;
-
-                  return (
-                    <button
-                      key={review.id}
-                      type="button"
-                      onClick={() => setSelectedReviewId(review.id)}
-                      className={`h-[202px] shrink-0 snap-start rounded-lg border bg-brew-cream p-4 text-left transition duration-200 ease-out hover:border-brew-amber/40 hover:bg-white hover:shadow-sm ${
-                        isSelected ? "row--selected shadow-md" : "border-brew-brown/10 shadow-none"
-                      }`}
-                    >
-                      <div className="flex items-start gap-3">
-                        <div className={`grid h-10 w-10 shrink-0 place-items-center rounded-full text-sm font-semibold ${review.avatarClassName}`}>
-                          {review.initials}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-semibold text-brew-brown">{review.name}</p>
-                          <div className="mt-1 flex items-center gap-0.5 text-brew-amber">
-                            {Array.from({ length: 5 }).map((_, index) => (
-                              <Star
-                                key={index}
-                                size={13}
-                                className={index < review.rating ? "fill-current" : "text-brew-brown/20"}
-                              />
-                            ))}
-                          </div>
+        <SectionCard title="Sample customer feedback" icon={Star} delay={420} className="xl:col-span-6">
+          <div className="scroll-container h-[420px] overflow-x-hidden overflow-y-auto pr-2 scroll-smooth snap-y snap-mandatory">
+            <div className="grid gap-4 sm:grid-cols-2">
+              {sampleFeedback.map((review) => {
+                return (
+                  <div
+                    key={review.id}
+                    className="h-[202px] shrink-0 snap-start rounded-lg border border-brew-brown/10 bg-brew-cream p-4 text-left transition duration-200 ease-out hover:border-brew-amber/40 hover:bg-white hover:shadow-sm"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className={`grid h-10 w-10 shrink-0 place-items-center rounded-full text-sm font-semibold ${review.avatarClassName}`}>
+                        {review.initials}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold text-brew-brown">{review.name}</p>
+                        <div className="mt-1 flex items-center gap-0.5 text-brew-amber">
+                          {Array.from({ length: 5 }).map((_, index) => (
+                            <Star
+                              key={index}
+                              size={13}
+                              className={index < review.rating ? "fill-current" : "text-brew-brown/20"}
+                            />
+                          ))}
                         </div>
                       </div>
-                      <p className="mt-3 text-sm leading-5 text-brew-roast">"{review.quote}"</p>
-                    </button>
-                  );
-                })}
-              </div>
+                    </div>
+                    <p className="mt-3 text-sm leading-5 text-brew-roast">"{review.quote}"</p>
+                  </div>
+                );
+              })}
             </div>
-          ) : (
-            <EmptyState icon={Star} title="No customer reviews yet" description="Reviews will use top customer names when customer data is available." />
-          )}
+          </div>
         </SectionCard>
       </section>
     </div>

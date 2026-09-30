@@ -131,3 +131,115 @@ class AISegmentResponse(BaseModel):
 
 class AIDraftResponse(BaseModel):
     message: str
+
+
+# =====================================================
+# ANALYTICS QUERY SCHEMAS
+# =====================================================
+from typing import Literal, Union
+from pydantic import Field, field_validator
+
+AllowedTables = Literal['customers', 'orders', 'segments', 'campaigns', 'communications']
+AllowedColumns = Literal[
+    'id', 'name', 'city', 'total_orders', 'total_spent', 'last_order_date', 'churn_score', 'cluster_id',
+    'customer_id', 'amount', 'created_at',
+    'customer_count',
+    'segment_id', 'channel', 'status',
+    'campaign_id', 'sent_at', 'delivered_at', 'opened_at', 'clicked_at'
+]
+
+class ColumnSpec(BaseModel):
+    table: AllowedTables
+    column: AllowedColumns
+    agg: Optional[Literal['COUNT', 'SUM', 'AVG', 'MIN', 'MAX']] = None
+
+class FilterSpec(BaseModel):
+    table: AllowedTables
+    column: AllowedColumns
+    operator: Literal['=', '!=', '>', '<', '>=', '<=', 'LIKE', 'ILIKE']
+    value: Any
+
+class OrderBySpec(BaseModel):
+    table: AllowedTables
+    column: AllowedColumns
+    agg: Optional[Literal['COUNT', 'SUM', 'AVG', 'MIN', 'MAX']] = None
+    direction: Literal['ASC', 'DESC'] = 'ASC'
+
+class QuerySpec(BaseModel):
+    tables: List[AllowedTables] = Field(min_length=1)
+    select: List[ColumnSpec] = Field(min_length=1)
+    where: Optional[List[FilterSpec]] = []
+    group_by: Optional[List[ColumnSpec]] = []
+    order_by: Optional[List[OrderBySpec]] = []
+    limit: int = Field(default=100, le=100)
+
+# =====================================================
+# ANALYTICS QUERY SCHEMAS
+# =====================================================
+from typing import Literal, Union, Any
+from pydantic import Field, model_validator
+
+AllowedTables = Literal['customers', 'orders', 'segments', 'campaigns', 'communications']
+AllowedColumns = Literal[
+    'id', 'name', 'city', 'total_orders', 'total_spent', 'last_order_date', 'churn_score', 'cluster_id',
+    'customer_id', 'amount', 'created_at',
+    'customer_count',
+    'segment_id', 'channel', 'status',
+    'campaign_id', 'sent_at', 'delivered_at', 'opened_at', 'clicked_at'
+]
+
+VALID_TABLE_COLUMNS = {
+    'customers': {'id', 'name', 'city', 'total_orders', 'total_spent', 'last_order_date', 'churn_score', 'cluster_id', 'created_at'},
+    'orders': {'id', 'customer_id', 'amount', 'created_at'},
+    'segments': {'id', 'name', 'customer_count', 'created_at'},
+    'campaigns': {'id', 'name', 'segment_id', 'channel', 'status', 'created_at'},
+    'communications': {'campaign_id', 'customer_id', 'status', 'sent_at', 'delivered_at', 'opened_at', 'clicked_at'}
+}
+
+def validate_table_column(cls, values):
+    if isinstance(values, dict) and 'table' in values and 'column' in values:
+        table = values['table']
+        col = values['column']
+        if col not in VALID_TABLE_COLUMNS.get(table, set()):
+            raise ValueError(f"Column '{col}' is not valid for table '{table}'")
+    return values
+
+class ColumnSpec(BaseModel):
+    table: AllowedTables
+    column: AllowedColumns
+    agg: Optional[Literal['COUNT', 'SUM', 'AVG', 'MIN', 'MAX']] = None
+
+    @model_validator(mode='before')
+    @classmethod
+    def check_table_col(cls, values):
+        return validate_table_column(cls, values)
+
+class FilterSpec(BaseModel):
+    table: AllowedTables
+    column: AllowedColumns
+    operator: Literal['=', '!=', '>', '<', '>=', '<=', 'LIKE', 'ILIKE', 'IS NULL', 'IS NOT NULL']
+    value: Any = None
+
+    @model_validator(mode='before')
+    @classmethod
+    def check_table_col(cls, values):
+        return validate_table_column(cls, values)
+
+class OrderBySpec(BaseModel):
+    table: AllowedTables
+    column: AllowedColumns
+    agg: Optional[Literal['COUNT', 'SUM', 'AVG', 'MIN', 'MAX']] = None
+    direction: Literal['ASC', 'DESC'] = 'ASC'
+
+    @model_validator(mode='before')
+    @classmethod
+    def check_table_col(cls, values):
+        return validate_table_column(cls, values)
+
+class QuerySpec(BaseModel):
+    tables: List[AllowedTables] = Field(min_length=1)
+    select: List[ColumnSpec] = Field(min_length=1)
+    where: Optional[List[FilterSpec]] = []
+    group_by: Optional[List[ColumnSpec]] = []
+    order_by: Optional[List[OrderBySpec]] = []
+    limit: int = Field(default=100, le=100)

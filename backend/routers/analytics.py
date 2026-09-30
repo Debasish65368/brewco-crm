@@ -6,8 +6,8 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from core.auth import verify_clerk_token
 from core.database import get_connection, release_connection
-from clients.ai_client import generate_analytics_sql, generate_sql_summary
-from services.sql_guard import validate_sql
+from clients.ai_client import generate_analytics_query_spec, generate_sql_summary
+from services.sql_guard import build_analytics_query
 
 router = APIRouter(prefix="/analytics", tags=["analytics"])
 logger = logging.getLogger(__name__)
@@ -21,24 +21,24 @@ async def query_analytics(
     user=Depends(verify_clerk_token)
 ):
     try:
-        sql = await generate_analytics_sql(payload.question)
+        spec_dict = await generate_analytics_query_spec(payload.question)
     except Exception as e:
-        logger.error(f"Error generating SQL: {e}")
-        raise HTTPException(status_code=500, detail="Failed to generate SQL from AI.")
+        logger.error(f"Error generating query spec: {e}")
+        raise HTTPException(status_code=500, detail="Failed to generate query spec from AI.")
 
-    is_valid, reason = validate_sql(sql)
+    is_valid, reason, sql, params = build_analytics_query(spec_dict)
     if not is_valid:
-        raise HTTPException(status_code=400, detail=f"Generated SQL is invalid or unsafe: {reason}")
-        
-    if "LIMIT " not in sql.upper():
-        sql += " LIMIT 100"
+        raise HTTPException(status_code=400, detail=f"Generated query is invalid or unsafe: {reason}")
 
     conn = None
     try:
         conn = await get_connection()
-        records = await conn.fetch(sql)
-        # convert dates to isoformat string or let fastapi handle it? fastapi handles datetime serialization.
-        results = [dict(record) for record in records]
+        
+        # Set read-only transaction for safety
+        async with conn.transaction(readonly=True):
+            records = await conn.fetch(sql, *params)
+            results = [dict(record) for record in records]
+            
     except asyncpg.PostgresError as e:
         logger.error(f"Postgres execution error: {e}")
         raise HTTPException(status_code=400, detail=f"Database execution error: {e}")

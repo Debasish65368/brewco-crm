@@ -1,36 +1,46 @@
 from typing import Any, Dict
-
+from pydantic import ValidationError
+from fastapi import HTTPException
+from schemas import SegmentFilterSchema
 
 def build_segment_sql(filter_json: Dict[str, Any]):
+    try:
+        validated = SegmentFilterSchema.model_validate(filter_json)
+    except ValidationError as e:
+        # We can raise an HTTPException so the API fails cleanly
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=400, detail="Invalid segment filter")
+    
     clauses = []
     values = []
 
-    if "city" in filter_json:
-        clauses.append(f"city = ${len(values)+1}")
-        values.append(filter_json["city"])
+    if validated.city is not None:
+        clauses.append(f"LOWER(city) = LOWER(${len(values)+1})")
+        values.append(validated.city)
 
-    if "cluster_id" in filter_json:
+    if validated.cluster_id is not None:
         clauses.append(f"cluster_id = ${len(values)+1}")
-        values.append(filter_json["cluster_id"])
+        values.append(validated.cluster_id)
 
-    if "min_spent" in filter_json:
+    if validated.min_spent is not None:
         clauses.append(f"total_spent >= ${len(values)+1}")
-        values.append(filter_json["min_spent"])
+        values.append(validated.min_spent)
 
-    if "max_spent" in filter_json:
+    if validated.max_spent is not None:
         clauses.append(f"total_spent <= ${len(values)+1}")
-        values.append(filter_json["max_spent"])
+        values.append(validated.max_spent)
 
-    if "min_orders" in filter_json:
+    if validated.min_orders is not None:
         clauses.append(f"total_orders >= ${len(values)+1}")
-        values.append(filter_json["min_orders"])
+        values.append(validated.min_orders)
 
-    if "last_order_before" in filter_json:
+    if validated.last_order_before is not None:
         clauses.append(f"last_order_date <= ${len(values)+1}")
-        values.append(filter_json["last_order_before"])
+        values.append(validated.last_order_before)
 
     where_clause = " AND ".join(clauses)
     if not where_clause:
-        where_clause = "TRUE"
+        raise HTTPException(status_code=400, detail="Segment must contain at least one filter condition.")
 
     return where_clause, values

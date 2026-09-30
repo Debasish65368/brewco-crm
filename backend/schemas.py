@@ -243,3 +243,27 @@ class QuerySpec(BaseModel):
     group_by: Optional[List[ColumnSpec]] = []
     order_by: Optional[List[OrderBySpec]] = []
     limit: int = Field(default=100, le=100)
+
+from pydantic import ConfigDict
+from datetime import date
+
+class SegmentFilterSchema(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    
+    city: Optional[str] = None
+    cluster_id: Optional[int] = Field(default=None, ge=0)
+    min_spent: Optional[float] = Field(default=None, ge=0)
+    max_spent: Optional[float] = Field(default=None, ge=0)
+    min_orders: Optional[int] = Field(default=None, ge=0)
+    last_order_before: Optional[date] = None
+
+    @model_validator(mode='after')
+    def check_min_max_spent(self):
+        if self.min_spent is not None and self.max_spent is not None:
+            if self.min_spent > self.max_spent:
+                raise ValueError('min_spent cannot be greater than max_spent')
+        
+        # Check if at least one filter is applied
+        if all(v is None for k, v in self.model_dump().items()):
+            raise ValueError('Segment must contain at least one filter condition.')
+        return self

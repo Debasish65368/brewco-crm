@@ -556,17 +556,17 @@ Only `frontend/vercel.json` is committed as deployment config. The API's Render 
 
 | Authentication | Dashboard |
 |---|---|
-| ![Authentication](Screenshots/Authentication.png) | ![Dashboard](Screenshots/dashboard1.png) |
+| ![Authentication](Screenshots/authentication.png) | ![Dashboard](Screenshots/dashboard-overview.png) |
 
 | Dashboard: funnel, top customers | Customers |
 |---|---|
-| ![Dashboard lower](Screenshots/dashboard2.png) | ![Customers](Screenshots/customer1.png) |
+| ![Dashboard lower](Screenshots/dashboard-funnel.png) | ![Customers](Screenshots/customers.png) |
 
 | Segments | Campaign creation |
 |---|---|
-| ![Segments](Screenshots/segments1.png) | ![Campaigns](Screenshots/campaigns1.png) |
+| ![Segments](Screenshots/segments.png) | ![Campaigns](Screenshots/campaigns.png) |
 
-![Campaign analytics](Screenshots/campaigns2.png)
+![Campaign analytics](Screenshots/campaign-analytics.png)
 
 | Page | What you see | Backend support |
 |---|---|---|

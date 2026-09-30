@@ -28,10 +28,11 @@ async def bulk_insert_orders(
             await conn.execute(
                 """
                 UPDATE customers SET total_orders = total_orders + 1,
-                total_spent = total_spent + $1, last_order_date = CURRENT_TIMESTAMP
+                total_spent = total_spent + $1, 
+                last_order_date = GREATEST(last_order_date, COALESCE($3, CURRENT_TIMESTAMP))
                 WHERE id = $2
                 """,
-                order.amount, order.customer_id
+                order.amount, order.customer_id, order.created_at
             )
             inserted += 1
         return {"success": True, "inserted": inserted}

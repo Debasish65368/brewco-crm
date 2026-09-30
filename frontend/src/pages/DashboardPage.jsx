@@ -299,7 +299,7 @@ function DashboardPage() {
     fetchRevenueTrend();
   }, []);
 
-  const cityChartData = useMemo(() => {
+  const fullCityData = useMemo(() => {
     const cityCounts = customers.reduce((acc, customer) => {
       const city = customer.city || "Unknown";
       acc[city] = (acc[city] || 0) + 1;
@@ -308,20 +308,23 @@ function DashboardPage() {
 
     return Object.entries(cityCounts)
       .map(([city, count]) => ({ city, customers: count }))
-      .sort((a, b) => b.customers - a.customers)
-      .slice(0, 8);
+      .sort((a, b) => b.customers - a.customers);
   }, [customers]);
 
+  const cityChartData = useMemo(() => {
+    return fullCityData.slice(0, 8);
+  }, [fullCityData]);
+
   const citySummary = useMemo(() => {
-    const largest = cityChartData[0];
-    const totalCustomers = cityChartData.reduce((sum, item) => sum + item.customers, 0);
+    const largest = fullCityData[0];
+    const totalCustomers = fullCityData.reduce((sum, item) => sum + item.customers, 0);
 
     return {
-      totalCities: cityChartData.length,
+      totalCities: fullCityData.length,
       largestCity: largest ? `${largest.city} (${largest.customers})` : "Not available",
       totalCustomers
     };
-  }, [cityChartData]);
+  }, [fullCityData]);
 
   const topCustomers = useMemo(() => [...customers].sort((a, b) => Number(b.total_spent || 0) - Number(a.total_spent || 0)).slice(0, 10), [customers]);
 

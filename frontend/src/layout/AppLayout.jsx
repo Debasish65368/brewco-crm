@@ -13,9 +13,9 @@ function AppLayout() {
         <Sidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed((value) => !value)} />
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <div className="hidden">
+          <div className="flex h-16 shrink-0 items-center gap-x-3 border-b border-brew-brown/10 px-4 lg:hidden">
             <MobileSidebar open={mobileOpen} onOpenChange={setMobileOpen} />
-            <div className="ml-3 flex items-center gap-2 text-sm font-semibold text-brew-brown">
+            <div className="flex items-center gap-2 text-sm font-semibold text-brew-brown">
               <span className="grid h-8 w-8 place-items-center rounded-md bg-brew-brown text-xs text-brew-foam">BC</span>
               BrewCo CRM
             </div>

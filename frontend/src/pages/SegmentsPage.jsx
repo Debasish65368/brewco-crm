@@ -73,6 +73,11 @@ function SegmentsPage() {
       toast.error("Segment name is required");
       return;
     }
+    
+    if (!aiSuggestion || !aiSuggestion.filter_json) {
+      toast.error("Please generate an AI segment suggestion first");
+      return;
+    }
 
     setCreating(true);
 
@@ -80,9 +85,11 @@ function SegmentsPage() {
       await createSegment({
         name: form.name.trim(),
         description: form.description.trim(),
-        filter_json: aiSuggestion?.filter_json || {}
+        filter_json: aiSuggestion.filter_json
       });
       setForm({ name: "", description: "" });
+      setAiSuggestion(null);
+      setAiPrompt("");
       toast.success("Segment created successfully");
     } catch {
       toast.error("Failed to create segment");

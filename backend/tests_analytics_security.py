@@ -61,8 +61,7 @@ tests = [
     },
     {
         "name": "Multiple-statement-style input cannot become executable SQL",
-        # We pass ; DROP TABLE as a value, which is parameterized safely, so the spec is valid, but the execution is safe.
-        "spec": {"tables": ["customers"], "select": [{"table": "customers", "column": "id"}], "where": [{"table": "customers", "column": "name", "operator": "=", "value": "'; DROP TABLE customers; --"}]},
+        "spec": {"tables": ["customers"], "select": [{"table": "customers", "column": "id"}], "where": [{"table": "customers", "column": "city", "operator": "=", "value": "'; DROP TABLE customers; --"}]},
         "expected_fail": False 
     },
     {

@@ -189,7 +189,7 @@ AllowedColumns = Literal[
 ]
 
 VALID_TABLE_COLUMNS = {
-    'customers': {'id', 'name', 'city', 'total_orders', 'total_spent', 'last_order_date', 'churn_score', 'cluster_id', 'created_at'},
+    'customers': {'id', 'city', 'total_orders', 'total_spent', 'last_order_date', 'churn_score', 'cluster_id', 'created_at'},
     'orders': {'id', 'customer_id', 'amount', 'created_at'},
     'segments': {'id', 'name', 'customer_count', 'created_at'},
     'campaigns': {'id', 'name', 'segment_id', 'channel', 'status', 'created_at'},

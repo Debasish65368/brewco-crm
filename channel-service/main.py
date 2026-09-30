@@ -1,7 +1,7 @@
-
 import asyncio
 import random
 from typing import Optional
+import os
 
 import httpx
 
@@ -9,6 +9,12 @@ from fastapi import FastAPI, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
+# =====================================================
+# CONFIGURATION
+# =====================================================
+
+CRM_RECEIPT_URL = os.getenv("CRM_RECEIPT_URL", "http://localhost:8000/receipt")
+CHANNEL_SERVICE_SECRET = os.getenv("CHANNEL_SERVICE_SECRET", "")
 
 # =====================================================
 # FASTAPI APP
@@ -42,7 +48,6 @@ class SendRequest(BaseModel):
     customer_id: int
     channel: str
     message: str
-    receipt_url: str
 
 
 # =====================================================
@@ -50,16 +55,22 @@ class SendRequest(BaseModel):
 # =====================================================
 
 async def send_receipt(
-    receipt_url: str,
     campaign_id: int,
     customer_id: int,
     status: str
 ):
+    if not CRM_RECEIPT_URL or not CHANNEL_SERVICE_SECRET:
+        print("[CALLBACK ERROR] Missing CRM_RECEIPT_URL or CHANNEL_SERVICE_SECRET configuration.")
+        return
 
     payload = {
         "campaign_id": campaign_id,
         "customer_id": customer_id,
         "status": status
+    }
+    
+    headers = {
+        "X-Channel-Service-Key": CHANNEL_SERVICE_SECRET
     }
 
     try:
@@ -67,8 +78,9 @@ async def send_receipt(
         async with httpx.AsyncClient() as client:
 
             response = await client.post(
-                receipt_url,
+                CRM_RECEIPT_URL,
                 json=payload,
+                headers=headers,
                 timeout=30
             )
 
@@ -95,8 +107,7 @@ async def simulate_message_lifecycle(
     campaign_id: int,
     customer_id: int,
     channel: str,
-    message: str,
-    receipt_url: str
+    message: str
 ):
 
     print(
@@ -124,7 +135,6 @@ async def simulate_message_lifecycle(
     if not delivered:
 
         await send_receipt(
-            receipt_url=receipt_url,
             campaign_id=campaign_id,
             customer_id=customer_id,
             status="failed"
@@ -142,7 +152,6 @@ async def simulate_message_lifecycle(
     #
 
     await send_receipt(
-        receipt_url=receipt_url,
         campaign_id=campaign_id,
         customer_id=customer_id,
         status="delivered"
@@ -177,7 +186,6 @@ async def simulate_message_lifecycle(
         return
 
     await send_receipt(
-        receipt_url=receipt_url,
         campaign_id=campaign_id,
         customer_id=customer_id,
         status="opened"
@@ -212,7 +220,6 @@ async def simulate_message_lifecycle(
         return
 
     await send_receipt(
-        receipt_url=receipt_url,
         campaign_id=campaign_id,
         customer_id=customer_id,
         status="clicked"
@@ -239,8 +246,7 @@ async def send_message(
         payload.campaign_id,
         payload.customer_id,
         payload.channel,
-        payload.message,
-        payload.receipt_url
+        payload.message
     )
 
     return {

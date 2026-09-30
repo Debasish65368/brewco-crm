@@ -1,6 +1,6 @@
 import httpx
 
-from core.config import CHANNEL_SERVICE_URL, CRM_RECEIPT_URL
+from core.config import CHANNEL_SERVICE_URL
 
 
 async def send_to_channel_service(
@@ -13,8 +13,7 @@ async def send_to_channel_service(
         "campaign_id": campaign_id,
         "customer_id": customer_id,
         "channel": channel,
-        "message": message,
-        "receipt_url": CRM_RECEIPT_URL
+        "message": message
     }
 
     async with httpx.AsyncClient() as client:

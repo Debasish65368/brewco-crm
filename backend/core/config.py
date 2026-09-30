@@ -16,6 +16,8 @@ CRM_RECEIPT_URL = os.getenv(
     "http://localhost:8000/receipt"
 )
 
+CHANNEL_SERVICE_SECRET = os.getenv("CHANNEL_SERVICE_SECRET", "")
+
 CLERK_JWKS_URL = os.getenv("CLERK_JWKS_URL")
 CLERK_ISSUER = os.getenv("CLERK_ISSUER")
 

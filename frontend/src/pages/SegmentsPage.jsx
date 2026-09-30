@@ -274,7 +274,7 @@ function SegmentsPage() {
                           <div className="mt-2 text-sm text-brew-roast">
                             <ul className="space-y-1 list-disc list-inside">
                               <li>Avg Orders: <strong>{cluster.avg_orders}</strong></li>
-                              <li>Avg Spent: <strong>${cluster.avg_spent}</strong></li>
+                              <li>Avg Spent: <strong>₹{cluster.avg_spent}</strong></li>
                               <li>Avg Recency: <strong>{cluster.avg_recency} days</strong></li>
                             </ul>
                           </div>

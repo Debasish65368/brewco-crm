@@ -38,7 +38,7 @@ import { getAnalyticsAnswer } from "@/services/analyticsApi";
 
 const currencyFormatter = new Intl.NumberFormat("en-US", {
   style: "currency",
-  currency: "USD",
+  currency: "INR",
   maximumFractionDigits: 0
 });
 
@@ -171,7 +171,7 @@ function RevenueTrendChart({ data = [] }) {
         <LineChart data={data} margin={{ top: 10, right: 14, left: 0, bottom: 8 }}>
           <CartesianGrid stroke="#eadfce" strokeDasharray="3 3" vertical={false} />
           <XAxis dataKey="date" tickFormatter={formatDate} tickLine={false} axisLine={false} tick={{ fill: "#7a5136", fontSize: 12 }} />
-          <YAxis tickFormatter={(value) => `$${Number(value).toLocaleString("en-US")}`} tickLine={false} axisLine={false} tick={{ fill: "#7a5136", fontSize: 12 }} width={74} />
+          <YAxis tickFormatter={(value) => `₹${Number(value).toLocaleString("en-US")}`} tickLine={false} axisLine={false} tick={{ fill: "#7a5136", fontSize: 12 }} width={74} />
           <Tooltip
             labelFormatter={(label) => formatDate(label)}
             formatter={(value) => [formatCurrency(value), "Revenue"]}

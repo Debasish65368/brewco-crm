@@ -233,8 +233,8 @@ What the validator enforces (`schemas.py`, `services/sql_guard.py`):
 
 ```mermaid
 flowchart LR
-    DB[("customers table<br/>name · email · phone · city · spend · churn")]
-    AL["Allow-list<br/>VALID_TABLE_COLUMNS<br/>excludes name / email / phone"]
+    DB[("customers table<br/>name · email · phone · city · spend · orders")]
+    AL["Allow-list<br/>VALID_TABLE_COLUMNS<br/>excludes name / email / phone / churn_score"]
     R["Validated result rows"]
     F["Sanitizer in generate_sql_summary()<br/>drops keys: name · email · phone"]
     G["🧠 Groq<br/>question + sanitized rows"]
@@ -246,9 +246,9 @@ flowchart LR
     style G fill:#1f2937,color:#fff,stroke:#F55036
 ```
 
-Two independent controls sit on this path. Upstream, the allow-list means identity columns cannot be selected at all. Downstream, the summarizer drops `name`, `email`, and `phone` keys from every row before building the prompt; `tests_analytics_pii_security.py` mocks Groq and asserts none of those values reach it. The prompt also labels result rows as data, not instructions.
+Two independent controls sit on this path. Upstream, the allow-list means identity columns cannot be selected at all, and un-migrated `churn_score` is excluded to prevent querying stale persisted values. Downstream, the summarizer drops `name`, `email`, and `phone` keys from every row before building the prompt; `tests_analytics_pii_security.py` mocks Groq and asserts none of those values reach it. The prompt also labels result rows as data, not instructions.
 
-**What does reach Groq:** the free-text question, the schema description, and allow-listed result values such as city, spend, and churn score. The segment-suggestion and message-drafting calls include the user's supplied text plus fixed application instructions (role description, required format, supported fields); they do not receive customer records. The Customers page shows names, emails, and phones to signed-in users via `GET /customers`, outside the AI path.
+**What does reach Groq:** the free-text question, the schema description, and allow-listed result values such as city, spend, and order totals. The segment-suggestion and message-drafting calls include the user's supplied text plus fixed application instructions (role description, required format, supported fields); they do not receive customer records. The Customers page shows names, emails, and phones to signed-in users via `GET /customers`, outside the AI path.
 
 ---
 
@@ -257,32 +257,38 @@ Two independent controls sit on this path. Upstream, the allow-list means identi
 ```mermaid
 flowchart TD
     A["customers<br/>total_orders · total_spent · last_order_date"]
-    B["Feature prep in scripts/<br/>recency days (999 if never ordered) · frequency · monetary"]
-    C1["train_churn_model.py<br/>rule-derived labels → LogisticRegression"]
+    B["Feature prep in services/churn_risk.py<br/>recency days · frequency · monetary"]
+    C1["services/churn_risk.py<br/>transparent heuristic scoring"]
     C2["train_rfm_clusters.py<br/>StandardScaler → KMeans, k = 2..8 by silhouette"]
-    D1["update_churn_scores.py<br/>predict_proba → customers.churn_score"]
+    D1["update_churn_scores.py<br/>deterministic score → customers.churn_score"]
     D2["update_customer_clusters.py<br/>predict → customers.cluster_id"]
     E["GET /segments/discovered<br/>cluster stats + heuristic labels"]
     F["Convert → segment {cluster_id}"]
     G["Campaign targeting"]
-    H["UI health badge<br/>VIP · At Risk · Active"]
+    H["UI health badge<br/>VIP · At Risk · Active · Unscored"]
 
     A --> B --> C1 --> D1 --> H
     B --> C2 --> D2 --> E --> F --> G
 ```
 
-**Churn score.** `LogisticRegression(C=0.1, max_iter=1000)` on four features: orders, spend, days since last order, average order value. The dataset has no real churn outcomes, so labels are **pseudo-labels** from a hand-set rule:
+**Churn risk score.** Calculated deterministically via `services/churn_risk.py` using a transparent behavioral heuristic (Path B). Because the CRM dataset does not contain observed ground-truth churn events (e.g. cancellations or empirical inactivity horizons), circular supervised training on pseudo-labels has been retired. The heuristic evaluates three observable behaviors:
 
 ```
-composite_risk = 0.5·min(days/90, 1) + 0.3·1/(1+orders) + 0.2·1/(1+spend/1000)
-is_churned     = composite_risk > 0.5
+recency_risk   = min(days_since_last_order / 90.0, 1.0)          # 50% weight (provisional 90-day prototype horizon)
+frequency_risk = 1.0 / (1.0 + total_orders)                      # 30% weight (habituation curve)
+monetary_risk  = 1.0 / (1.0 + total_spent / 1000.0)              # 20% weight (monetary commitment)
+churn_score    = 0.50·recency_risk + 0.30·frequency_risk + 0.20·monetary_risk
 ```
 
-Because the label is a function of nearly the same inputs, the model is best read as a smooth approximation of that rule, not a validated predictor; no hold-out evaluation is recorded. The UI badge: VIP if orders > 4 and spend > 5000, else At Risk if `churn_score` > 0.70, else Active.
+The score is bounded in `[0.0, 1.0]`. The 90-day recency cutoff, 50/30/20 component weighting, and ₹1,000 monetary scaling are provisional heuristic parameters chosen for this prototype; they have not been statistically calibrated against observed BrewCo churn outcomes. The score represents a relative behavioral risk indicator, **not** an empirically calibrated probability of churn. UI health badges:
+- **VIP:** High-value customers (`total_orders > 4` and `total_spent > 5000`).
+- **At Risk:** Non-VIP customers with `churn_score > 0.70`.
+- **Active:** Non-VIP customers with `churn_score <= 0.70`.
+- **Unscored:** Customers with no orders or uncalculated scores (missing data is never assumed to be active/low-risk).
 
 **RFM clusters.** KMeans over standardized recency, frequency, and monetary values. The training script picks k from 2–8 by best silhouette score (`random_state=42`); the score is printed at training time and not stored. Cluster IDs are written to `customers.cluster_id`. Human-readable names are assigned **at request time by a heuristic** in `routers/segments.py`: highest orders×spend → *Loyal High-Value*, then highest recency → *At Risk*, lowest orders → *New/Occasional*, highest spend → *High Spenders*, remainder → *Standard Group*.
 
-Models are pickles in `backend/models/`, loaded only by the scripts. Scoring is **manual**: new customers keep default scores until the scripts rerun.
+RFM models are pickles in `backend/models/`, loaded only by the cluster scripts. Churn-risk scores are evaluated deterministically at read time via `services/churn_risk.py` on customer endpoints, ensuring consistent heuristic semantics without requiring live database mutations.
 
 ---
 
@@ -321,7 +327,7 @@ sequenceDiagram
 
 ## 🗃️ Data Model
 
-The repository ships **no DDL file**, so this model is reconstructed from the queries and two migration scripts. Relationships are shown as the code uses them; database-level constraints are not verified.
+The database schema is defined in [`backend/schema.sql`](backend/schema.sql), providing safe, repeatable DDL (`CREATE TABLE IF NOT EXISTS`). Relationships, constraints, and cascade rules reflect the application's relational data model.
 
 ```mermaid
 erDiagram
@@ -458,14 +464,14 @@ These are targeted controls, not a claim of complete security.
 ```
 brewco-crm/
 ├── backend/
-│   ├── main.py · schemas.py · seed.py · requirements.txt
+│   ├── main.py · schemas.py · schema.sql · seed.py · requirements.txt
 │   ├── core/         auth.py · config.py · database.py
 │   ├── routers/      customers · orders · segments · campaigns · dashboard · ai · analytics · receipts · root
 │   ├── services/     sql_guard.py · segment_filters.py · campaign_processor.py
 │   ├── clients/      ai_client.py · channel_client.py
-│   ├── scripts/      train_* · update_* · 01_/02_ column migrations
-│   ├── models/       churn_model.pkl · rfm_model.pkl · rfm_scaler.pkl
-│   └── tests_*.py    5 regression scripts
+│   ├── scripts/      train_* · update_* · 01_/02_ column migrations · reset_dev_db.*
+│   ├── models/       rfm_model.pkl · rfm_scaler.pkl (churn_model.pkl retired)
+│   └── tests_*.py    regression test suites
 ├── channel-service/  main.py
 ├── frontend/         src/{pages,layout,components,hooks,services,utils} · vercel.json
 ├── Screenshots/
@@ -483,20 +489,54 @@ git clone https://github.com/Debasish65368/brewco-crm.git
 cd brewco-crm
 ```
 
-**Database.** With no schema file in the repo, create the five tables from the [data model](#️-data-model) first (`seed.py` only deletes and inserts rows), then add the ML columns:
+**Database Setup & Workflows.** The repository maintains strict separation between initialization, additive migrations, development seeding, and destructive resets:
 
-```bash
-cd backend && python scripts/01_add_churn_score_column.py && python scripts/02_add_cluster_id_column.py
-```
+1. **Initialize New Database (Safe, Non-Destructive):**
+   ```bash
+   # Executes repeatable CREATE TABLE IF NOT EXISTS and CREATE INDEX IF NOT EXISTS
+   psql $DATABASE_URL < backend/schema.sql
+   ```
+
+2. **Apply Additive Migrations to an Existing Database:**
+   ```bash
+   # Adds churn_score and cluster_id columns if not already present; preserves existing data
+   cd backend
+   python scripts/01_add_churn_score_column.py
+   python scripts/02_add_cluster_id_column.py
+   ```
+
+3. **Seed Synthetic Demo Data (Local Development Only):**
+   ```bash
+   # Seeds 100 customers and 300 orders (Faker en_IN).
+   # WARNING: Deletes existing customer and campaign data!
+   # Requires DEV_DATABASE_URL pointing to a local host (localhost, 127.0.0.1, ::1).
+   # Refuses to fall back to DATABASE_URL and fails closed if APP_ENV is unset or production.
+   # Requires explicit confirmation flag:
+   cd backend
+   python seed.py --confirm-reset
+   ```
+
+4. **Destructive Development Reset (Local Development Only):**
+   ```bash
+   # WARNING: Drops all 5 CRM tables and permanently destroys all data!
+   # Requires DEV_DATABASE_URL pointing to a local host (localhost, 127.0.0.1, ::1).
+   # Refuses to fall back to DATABASE_URL and fails closed if APP_ENV is unset or production.
+   # Requires explicit confirmation flag:
+   cd backend
+   python scripts/reset_dev_db.py --confirm-destructive-reset
+   # Alternatively via psql (enforces preflight inet_server_addr() loopback check):
+   # psql $DEV_DATABASE_URL < backend/scripts/reset_dev_db.sql
+   ```
 
 **Terminal 1: Backend** (`http://localhost:8000`)
 ```bash
 cd backend
 python -m venv .venv && source .venv/bin/activate    # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-pip install faker                                    # only needed for seed.py
-python seed.py                                       # 100 customers, 300 orders (Faker en_IN)
-python scripts/train_churn_model.py && python scripts/update_churn_scores.py
+pip install faker                                    # only needed for development seed.py
+# Set DEV_DATABASE_URL in .env before running local seed (requires local Postgres):
+python seed.py --confirm-reset                       # seeds demo data (local dev only)
+python scripts/update_churn_scores.py                 # updates heuristic churn-risk scores
 python scripts/train_rfm_clusters.py && python scripts/update_customer_clusters.py
 uvicorn main:app --reload
 ```
@@ -615,9 +655,9 @@ Five standalone scripts in `backend/`, run directly with `python`; there is no p
 - **Single-tenant, no roles.** Any valid Clerk user can use every route. CORS is `*` on both services.
 - **Channel `/send` is unauthenticated.** The shared secret protects only the callback direction.
 - **Campaign processing is not durable.** It uses FastAPI background tasks, so a restart mid-dispatch can leave a campaign in `processing`; there are no retries, and receipts are not checked for ordering or idempotency.
-- **Churn labels are rule-derived** and unevaluated (see [ML layer](#-segmentation-and-ml-layer)); `cluster_id` is not a stable identity across retrains, so a converted segment may match different customers after retraining.
+- **Churn scoring is heuristic** rather than predictive: because no historical ground-truth cancellation events exist, scores reflect behavioral dormancy rules rather than validated machine-learning predictions. `cluster_id` is not a stable identity across retrains, so a converted segment may match different customers after retraining.
 - **ML scoring is manual.** New customers keep a default `churn_score` and are absent from discovered segments until scripts rerun.
-- **No schema or migration tooling** beyond two `ALTER` scripts, and bulk insert endpoints loop without a wrapping transaction.
+- **Schema and migration tooling:** Schema initialization is defined via `backend/schema.sql` and additive column migrations via `scripts/01_...` and `scripts/02_...`. Destructive reset operations are strictly isolated in `scripts/reset_dev_db.py` (and `seed.py`) with fail-closed production guards and explicit confirmation requirements. (Bulk customer and order imports are transactionally protected with all-or-nothing rollback and accurate conflict counting).
 - **Read-only is not a separate role.** Analytics shares the API's connection pool, and results are not cached.
 - **Sample data:** the feedback panel is static, and all demo customers and orders are synthetic; observability is limited to `print` and standard logging.
 

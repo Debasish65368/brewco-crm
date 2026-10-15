@@ -19,7 +19,7 @@ async def dashboard_stats(
         delivered = await conn.fetchval("SELECT COUNT(*) FROM communications WHERE delivered_at IS NOT NULL")
         opened = await conn.fetchval("SELECT COUNT(*) FROM communications WHERE opened_at IS NOT NULL")
         clicked = await conn.fetchval("SELECT COUNT(*) FROM communications WHERE clicked_at IS NOT NULL")
-        sent = await conn.fetchval("SELECT COUNT(*) FROM communications")
+        sent = await conn.fetchval("SELECT COUNT(*) FROM communications WHERE sent_at IS NOT NULL")
 
         delivery_rate = round((delivered / sent) * 100, 2) if sent > 0 else 0
         open_rate = round((opened / delivered) * 100, 2) if delivered > 0 else 0

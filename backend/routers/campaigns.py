@@ -82,7 +82,8 @@ async def campaign_stats(
         if not campaign:
             raise HTTPException(status_code=404, detail="Campaign not found")
 
-        sent_count = await conn.fetchval("SELECT COUNT(*) FROM communications WHERE campaign_id = $1", campaign_id)
+        total_count = await conn.fetchval("SELECT COUNT(*) FROM communications WHERE campaign_id = $1", campaign_id)
+        sent_count = await conn.fetchval("SELECT COUNT(*) FROM communications WHERE campaign_id = $1 AND sent_at IS NOT NULL", campaign_id)
         delivered_count = await conn.fetchval("SELECT COUNT(*) FROM communications WHERE campaign_id = $1 AND delivered_at IS NOT NULL", campaign_id)
         opened_count = await conn.fetchval("SELECT COUNT(*) FROM communications WHERE campaign_id = $1 AND opened_at IS NOT NULL", campaign_id)
         clicked_count = await conn.fetchval("SELECT COUNT(*) FROM communications WHERE campaign_id = $1 AND clicked_at IS NOT NULL", campaign_id)
@@ -90,6 +91,7 @@ async def campaign_stats(
 
         return {
             "campaign_id": campaign_id,
+            "total": total_count,
             "sent": sent_count,
             "delivered": delivered_count,
             "opened": opened_count,

@@ -396,7 +396,7 @@ function CampaignsPage() {
       <Drawer
         open={Boolean(selectedCampaign)}
         title={selectedCampaign?.name || "Campaign stats"}
-        description={selectedCampaign ? `${selectedCampaign.segment_name || selectedCampaign.segment_id || "Segment unavailable"} · ${selectedCampaign.channel}` : ""}
+        description={selectedCampaign ? `${selectedCampaign.segment_name || selectedCampaign.segment_id || "Segment unavailable"} · ${selectedCampaign.channel} · Status: ${selectedCampaign.status.replace(/_/g, " ")}` : ""}
         onClose={closeStatsDrawer}
       >
         {statsLoading ? (
@@ -411,7 +411,7 @@ function CampaignsPage() {
         ) : campaignStats ? (
           <div className="space-y-5">
             <div className="grid gap-3 sm:grid-cols-2">
-              <StatCard label="Sent" value={formatNumber(campaignStats.sent)} />
+              <StatCard label="Dispatched" value={formatNumber(campaignStats.sent)} />
               <StatCard label="Delivered" value={formatNumber(campaignStats.delivered)} />
               <StatCard label="Opened" value={formatNumber(campaignStats.opened)} />
               <StatCard label="Clicked" value={formatNumber(campaignStats.clicked)} />
@@ -422,7 +422,7 @@ function CampaignsPage() {
             <div className="rounded-lg border border-brew-brown/15 bg-white/60 p-4">
               <h3 className="text-sm font-semibold text-brew-brown">Funnel</h3>
               <div className="mt-4 space-y-4">
-                <FunnelBar label="Sent" value={campaignStats.sent} max={sentCount} />
+                <FunnelBar label="Dispatched" value={campaignStats.sent} max={sentCount} />
                 <FunnelBar label="Delivered" value={campaignStats.delivered} max={sentCount} />
                 <FunnelBar label="Opened" value={campaignStats.opened} max={sentCount} />
                 <FunnelBar label="Clicked" value={campaignStats.clicked} max={sentCount} />

@@ -35,11 +35,12 @@ function HealthBadge({ value }) {
   const styles = {
     VIP: "bg-brew-amber/15 text-brew-roast ring-brew-amber/30",
     "At Risk": "bg-red-100 text-red-800 ring-red-200",
-    Active: "bg-green-100 text-green-800 ring-green-200"
+    Active: "bg-green-100 text-green-800 ring-green-200",
+    Unscored: "bg-brew-brown/10 text-brew-roast ring-brew-brown/20"
   };
 
   return (
-    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset ${styles[value]}`}>
+    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset ${styles[value] || styles.Unscored}`}>
       {value}
     </span>
   );

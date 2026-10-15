@@ -1,13 +1,18 @@
 import asyncio
+import hmac
 import random
 from typing import Optional
 import os
 
 import httpx
+from dotenv import load_dotenv
 
-from fastapi import FastAPI, BackgroundTasks
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import FastAPI, BackgroundTasks, Header, HTTPException
 from pydantic import BaseModel
+
+# Load environment variables from a local .env file when present.
+# In deployment (Render, Railway, etc.) variables are injected directly.
+load_dotenv()
 
 # =====================================================
 # CONFIGURATION
@@ -25,18 +30,10 @@ app = FastAPI(
     version="1.0.0"
 )
 
-
-# =====================================================
-# CORS
-# =====================================================
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# NOTE: No CORS middleware. This service is called only by the CRM backend
+# (server-to-server). Browser CORS access is not needed or intended.
+# The /send endpoint is protected by the shared-secret header check below,
+# independent of any CORS policy.
 
 
 # =====================================================
@@ -68,7 +65,7 @@ async def send_receipt(
         "customer_id": customer_id,
         "status": status
     }
-    
+
     headers = {
         "X-Channel-Service-Key": CHANNEL_SERVICE_SECRET
     }
@@ -235,11 +232,49 @@ async def simulate_message_lifecycle(
 # POST /send
 # =====================================================
 
+def _verify_send_auth(x_channel_service_key: Optional[str]) -> None:
+    """
+    Validate the shared-secret header on /send requests.
+    Fails closed: if CHANNEL_SERVICE_SECRET is not configured the endpoint
+    is NOT publicly accessible — it raises 500 rather than accepting any caller.
+    Uses hmac.compare_digest for constant-time comparison.
+    The supplied header value is never logged.
+    """
+    if not CHANNEL_SERVICE_SECRET:
+        raise HTTPException(
+            status_code=500,
+            detail="Server misconfiguration: channel service secret not set"
+        )
+    if not x_channel_service_key:
+        raise HTTPException(
+            status_code=401,
+            detail="Missing X-Channel-Service-Key header"
+        )
+    if not hmac.compare_digest(x_channel_service_key, CHANNEL_SERVICE_SECRET):
+        raise HTTPException(
+            status_code=403,
+            detail="Invalid X-Channel-Service-Key"
+        )
+
+
 @app.post("/send")
 async def send_message(
     payload: SendRequest,
-    background_tasks: BackgroundTasks
+    background_tasks: BackgroundTasks,
+    x_channel_service_key: Optional[str] = Header(None)
 ):
+    """
+    Accept an outbound message dispatch request.
+
+    Returns HTTP 200 with status='queued' to acknowledge that the channel service
+    has accepted the dispatch request. This confirms dispatch acceptance only;
+    it does not guarantee or confirm delivery to the customer. Delivery confirmation
+    occurs asynchronously via receipt callbacks.
+
+    Note on Durability: The delivery lifecycle simulation runs in-process via FastAPI
+    BackgroundTasks and is not durable across process restarts.
+    """
+    _verify_send_auth(x_channel_service_key)
 
     background_tasks.add_task(
         simulate_message_lifecycle,

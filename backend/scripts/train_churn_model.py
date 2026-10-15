@@ -1,82 +1,46 @@
-import asyncio
+"""
+RETIRED: Supervised Churn Model Training Script.
+
+Fix 3 / Path B Deprecation Notice:
+This script previously trained a Logistic Regression classifier on pseudo-labels
+derived from a heuristic formula using the exact same input features
+(recency, frequency, spend).
+
+Audit Findings:
+1. Ground Truth: No independent observed customer churn events, cancellation logs,
+   or verified inactivity outcomes exist in the BrewCo dataset.
+2. Methodological Defect: Fitting a supervised model on pseudo-labels is circular
+   and produces an illusion of statistical learning without true generalization
+   or predictive power.
+3. Architecture Decision: Fix 3 adopts Path B (Defensible Heuristic Prototype).
+   Churn risk is now evaluated transparently and deterministically via
+   `backend.services.churn_risk.calculate_churn_risk`, and applied via
+   `backend.scripts.update_churn_scores.py`.
+
+This script is preserved for historical reference and documentation integrity,
+but will not train or serialize pseudo-label model artifacts.
+"""
+
 import sys
-import os
-import pickle
-from datetime import datetime
 
-# Add parent directory to path so we can import core.config
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import asyncpg
-from core.config import DATABASE_URL
-from sklearn.linear_model import LogisticRegression
-import numpy as np
+def main():
+    print("=" * 70)
+    print("BREWCO CRM — CHURN MODEL TRAINING RETIRED (FIX 3 / PATH B)")
+    print("=" * 70)
+    print(
+        "Notice: Supervised model training on synthetic pseudo-labels has been retired.\n"
+        "Because BrewCo CRM has no independent ground-truth churn outcomes,\n"
+        "fitting a classifier to heuristic labels was circular and unvalidated.\n\n"
+        "Active Methodology:\n"
+        "- Transparent heuristic scoring in `backend/services/churn_risk.py`\n"
+        "- Batch database updates in `backend/scripts/update_churn_scores.py`\n"
+        "- Scoring: Recency (50%), Frequency (30%), Monetary (20%)\n"
+        "- Range: [0.0, 1.0], bounded and deterministic.\n"
+    )
+    print("No model artifacts were generated.")
+    return 0
 
-async def train_model():
-    if not DATABASE_URL:
-        raise Exception("DATABASE_URL not found")
-        
-    conn = await asyncpg.connect(DATABASE_URL)
-    try:
-        print("Connected to database. Fetching customers...")
-        rows = await conn.fetch(
-            "SELECT id, total_orders, total_spent, last_order_date FROM customers"
-        )
-        
-        X = []
-        y = []
-        
-        now = datetime.now()
-        
-        for row in rows:
-            total_orders = float(row['total_orders'] or 0)
-            total_spent = float(row['total_spent'] or 0)
-            last_order_date = row['last_order_date']
-            
-            # Days since last order
-            if last_order_date:
-                days_since_last_order = (now - last_order_date).days
-            else:
-                # If they never ordered, make it large
-                days_since_last_order = 999
-                
-            # Avg order value (handle div zero)
-            avg_order_value = total_spent / total_orders if total_orders > 0 else 0.0
-            
-            # Composite Risk Score for Label Generation
-            recency_risk = min(days_since_last_order / 90.0, 1.0)
-            frequency_risk = 1.0 / (1.0 + total_orders)
-            monetary_risk = 1.0 / (1.0 + total_spent / 1000.0)
-            
-            composite_risk = (0.5 * recency_risk) + (0.3 * frequency_risk) + (0.2 * monetary_risk)
-            is_churned = 1 if composite_risk > 0.5 else 0
-            
-            X.append([total_orders, total_spent, days_since_last_order, avg_order_value])
-            y.append(is_churned)
-            
-        if not X:
-            print("No customers found to train on.")
-            return
-
-        print(f"Training on {len(X)} customers...")
-        
-        X = np.array(X)
-        y = np.array(y)
-        
-        model = LogisticRegression(max_iter=1000, C=0.1)
-        model.fit(X, y)
-        
-        models_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "models")
-        os.makedirs(models_dir, exist_ok=True)
-        
-        model_path = os.path.join(models_dir, "churn_model.pkl")
-        with open(model_path, "wb") as f:
-            pickle.dump(model, f)
-            
-        print(f"Model trained and saved to {model_path}")
-        
-    finally:
-        await conn.close()
 
 if __name__ == "__main__":
-    asyncio.run(train_model())
+    sys.exit(main())

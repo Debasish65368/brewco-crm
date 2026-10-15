@@ -84,7 +84,7 @@ Return ONLY valid JSON matching this schema:
 }}
 
 Allowed Tables and Columns (DO NOT USE ANY OTHERS):
-- customers: id, city, total_orders, total_spent, last_order_date, churn_score, cluster_id
+- customers: id, city, total_orders, total_spent, last_order_date, cluster_id
 - orders: id, customer_id, amount, created_at
 - segments: id, name, customer_count, created_at
 - campaigns: id, name, channel, status, created_at

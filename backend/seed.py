@@ -1,4 +1,5 @@
 import os
+import sys
 import json
 import random
 import asyncio
@@ -6,13 +7,35 @@ from datetime import datetime, timedelta
 
 import asyncpg
 from dotenv import load_dotenv
-from faker import Faker
 
 load_dotenv()
 
-DATABASE_URL = os.getenv("DATABASE_URL")
+# Add backend directory to sys.path so scripts can be imported cleanly
+sys_backend_dir = os.path.dirname(os.path.abspath(__file__))
+if sys_backend_dir not in sys.path:
+    sys.path.insert(0, sys_backend_dir)
 
-fake = Faker("en_IN")
+try:
+    from scripts.reset_dev_db import (
+        ALLOWED_LOCAL_HOSTS,
+        ALLOWED_DEV_ENVIRONMENTS,
+        validate_local_database_host,
+        resolve_destructive_db_url,
+    )
+except ImportError:
+    from backend.scripts.reset_dev_db import (
+        ALLOWED_LOCAL_HOSTS,
+        ALLOWED_DEV_ENVIRONMENTS,
+        validate_local_database_host,
+        resolve_destructive_db_url,
+    )
+
+try:
+    from faker import Faker
+    fake = Faker("en_IN")
+except ImportError:
+    Faker = None
+    fake = None
 
 INDIAN_CITIES = [
     "Delhi", "Mumbai", "Bangalore", "Hyderabad", "Chennai",
@@ -36,6 +59,8 @@ COFFEE_MENU = [
 
 
 async def create_customers(conn):
+    if fake is None:
+        raise RuntimeError("Faker is required for synthetic data generation. Please install it with: pip install faker")
     customer_ids = []
 
     for _ in range(100):
@@ -116,11 +141,59 @@ async def create_orders(conn, customer_ids):
     print("Inserted 300 orders")
 
 
-async def seed_database():
-    if not DATABASE_URL:
-        raise Exception("DATABASE_URL not found")
+import sys
 
-    conn = await asyncpg.connect(DATABASE_URL)
+def check_seed_safeguards(argv=None, env=None, db_url=None):
+    """
+    Validates environment, confirmation flags, and database target before permitting synthetic data seeding.
+    Fails closed on ambiguous or missing environment configurations.
+    Requires DEV_DATABASE_URL and validates local loopback host.
+    """
+    env_dict = env if env is not None else os.environ
+    args = argv if argv is not None else sys.argv
+
+    # 1. Environment Guard (Fail-Closed on Ambiguous / Missing Environment)
+    raw_env = env_dict.get("APP_ENV") or env_dict.get("ENVIRONMENT")
+    if not raw_env:
+        raise RuntimeError(
+            "REFUSED: Environment is ambiguous. Neither APP_ENV nor ENVIRONMENT is explicitly set. "
+            "Destructive operations require an explicitly configured development environment "
+            "(e.g. APP_ENV='development')."
+        )
+
+    app_env = raw_env.strip().lower()
+    if app_env in ("production", "prod"):
+        raise RuntimeError(
+            f"REFUSED: Seeding cannot run in production (APP_ENV={app_env!r}). "
+            "Data loss prevention safeguard active."
+        )
+
+    if app_env not in ALLOWED_DEV_ENVIRONMENTS:
+        raise RuntimeError(
+            f"REFUSED: Environment {app_env!r} is not an authorized development environment. "
+            "Destructive operations require APP_ENV='development'."
+        )
+
+    # 2. Explicit Confirmation Guard
+    confirm_flag = "--confirm-reset" in args
+    confirm_env = env_dict.get("CONFIRM_SEED_RESET", "").lower() in ("true", "1", "yes")
+
+    if not (confirm_flag or confirm_env):
+        raise RuntimeError(
+            "REFUSED: Seeding requires explicit confirmation because it deletes all existing "
+            "customers, orders, segments, campaigns, and communications. "
+            "Pass '--confirm-reset' on the command line or set CONFIRM_SEED_RESET=true to proceed."
+        )
+
+    # 3. Dedicated Target & Local Host Validation
+    return resolve_destructive_db_url(db_url=db_url, env=env_dict, caller_name="Data seeder")
+
+
+async def seed_database(db_url: str = None, argv=None, env=None):
+    target_url = check_seed_safeguards(argv=argv, env=env, db_url=db_url)
+
+    print("Connecting to local development database for seeding...")
+    conn = await asyncpg.connect(target_url)
 
     try:
         print("Connected to database")
@@ -150,4 +223,8 @@ async def seed_database():
 
 
 if __name__ == "__main__":
-    asyncio.run(seed_database())
+    try:
+        asyncio.run(seed_database())
+    except RuntimeError as e:
+        print(f"\n[ERROR] {e}\n", file=sys.stderr)
+        sys.exit(1)

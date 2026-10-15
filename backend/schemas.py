@@ -141,7 +141,7 @@ from pydantic import Field, field_validator
 
 AllowedTables = Literal['customers', 'orders', 'segments', 'campaigns', 'communications']
 AllowedColumns = Literal[
-    'id', 'name', 'city', 'total_orders', 'total_spent', 'last_order_date', 'churn_score', 'cluster_id',
+    'id', 'name', 'city', 'total_orders', 'total_spent', 'last_order_date', 'cluster_id',
     'customer_id', 'amount', 'created_at',
     'customer_count',
     'segment_id', 'channel', 'status',
@@ -181,7 +181,7 @@ from pydantic import Field, model_validator
 
 AllowedTables = Literal['customers', 'orders', 'segments', 'campaigns', 'communications']
 AllowedColumns = Literal[
-    'id', 'name', 'city', 'total_orders', 'total_spent', 'last_order_date', 'churn_score', 'cluster_id',
+    'id', 'name', 'city', 'total_orders', 'total_spent', 'last_order_date', 'cluster_id',
     'customer_id', 'amount', 'created_at',
     'customer_count',
     'segment_id', 'channel', 'status',
@@ -189,7 +189,7 @@ AllowedColumns = Literal[
 ]
 
 VALID_TABLE_COLUMNS = {
-    'customers': {'id', 'city', 'total_orders', 'total_spent', 'last_order_date', 'churn_score', 'cluster_id', 'created_at'},
+    'customers': {'id', 'city', 'total_orders', 'total_spent', 'last_order_date', 'cluster_id', 'created_at'},
     'orders': {'id', 'customer_id', 'amount', 'created_at'},
     'segments': {'id', 'name', 'customer_count', 'created_at'},
     'campaigns': {'id', 'name', 'segment_id', 'channel', 'status', 'created_at'},
@@ -249,7 +249,7 @@ from datetime import date
 
 class SegmentFilterSchema(BaseModel):
     model_config = ConfigDict(extra='forbid')
-    
+
     city: Optional[str] = None
     cluster_id: Optional[int] = Field(default=None, ge=0)
     min_spent: Optional[float] = Field(default=None, ge=0)
@@ -262,7 +262,7 @@ class SegmentFilterSchema(BaseModel):
         if self.min_spent is not None and self.max_spent is not None:
             if self.min_spent > self.max_spent:
                 raise ValueError('min_spent cannot be greater than max_spent')
-        
+
         # Check if at least one filter is applied
         if all(v is None for k, v in self.model_dump().items()):
             raise ValueError('Segment must contain at least one filter condition.')

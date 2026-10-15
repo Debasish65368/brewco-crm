@@ -11,7 +11,7 @@ from core.config import DATABASE_URL
 async def run_migration():
     if not DATABASE_URL:
         raise Exception("DATABASE_URL not found")
-        
+
     conn = await asyncpg.connect(DATABASE_URL)
     try:
         print("Connected to database")
@@ -21,6 +21,7 @@ async def run_migration():
         print("Migration successful: added cluster_id column.")
     except Exception as e:
         print(f"Migration failed: {e}")
+        raise
     finally:
         await conn.close()
 

@@ -30,6 +30,11 @@ tests = [
         "expected_fail": True
     },
     {
+        "name": "Stale churn_score column blocked from query allowlist",
+        "spec": {"tables": ["customers"], "select": [{"table": "customers", "column": "churn_score"}]},
+        "expected_fail": True
+    },
+    {
         "name": "Unknown table blocked",
         "spec": {"tables": ["pg_authid"], "select": [{"table": "pg_authid", "column": "rolname"}]},
         "expected_fail": True
@@ -62,7 +67,7 @@ tests = [
     {
         "name": "Multiple-statement-style input cannot become executable SQL",
         "spec": {"tables": ["customers"], "select": [{"table": "customers", "column": "id"}], "where": [{"table": "customers", "column": "city", "operator": "=", "value": "'; DROP TABLE customers; --"}]},
-        "expected_fail": False 
+        "expected_fail": False
     },
     {
         "name": "Valid customer query allowed",
@@ -87,7 +92,7 @@ def main():
     for t in tests:
         if not run_test(t["name"], t["spec"], t["expected_fail"]):
             all_passed = False
-            
+
     if all_passed:
         print("All tests passed.")
         sys.exit(0)

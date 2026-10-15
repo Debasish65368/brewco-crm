@@ -25,22 +25,48 @@ async def receive_receipt(
         status = payload.status.lower()
         if status == "delivered":
             await conn.execute(
-                "UPDATE communications SET status = 'delivered', delivered_at = CURRENT_TIMESTAMP WHERE campaign_id = $1 AND customer_id = $2",
+                """
+                UPDATE communications
+                SET status = CASE WHEN status IN ('opened', 'clicked') THEN status ELSE 'delivered' END,
+                    delivered_at = COALESCE(delivered_at, CURRENT_TIMESTAMP),
+                    sent_at = COALESCE(sent_at, CURRENT_TIMESTAMP)
+                WHERE campaign_id = $1 AND customer_id = $2
+                """,
                 payload.campaign_id, payload.customer_id
             )
         elif status == "failed":
             await conn.execute(
-                "UPDATE communications SET status = 'failed' WHERE campaign_id = $1 AND customer_id = $2",
+                """
+                UPDATE communications
+                SET status = 'failed'
+                WHERE campaign_id = $1 AND customer_id = $2
+                  AND status NOT IN ('delivered', 'opened', 'clicked')
+                """,
                 payload.campaign_id, payload.customer_id
             )
         elif status == "opened":
             await conn.execute(
-                "UPDATE communications SET status = 'opened', opened_at = CURRENT_TIMESTAMP WHERE campaign_id = $1 AND customer_id = $2",
+                """
+                UPDATE communications
+                SET status = CASE WHEN status = 'clicked' THEN status ELSE 'opened' END,
+                    opened_at = COALESCE(opened_at, CURRENT_TIMESTAMP),
+                    delivered_at = COALESCE(delivered_at, CURRENT_TIMESTAMP),
+                    sent_at = COALESCE(sent_at, CURRENT_TIMESTAMP)
+                WHERE campaign_id = $1 AND customer_id = $2
+                """,
                 payload.campaign_id, payload.customer_id
             )
         elif status == "clicked":
             await conn.execute(
-                "UPDATE communications SET status = 'clicked', clicked_at = CURRENT_TIMESTAMP WHERE campaign_id = $1 AND customer_id = $2",
+                """
+                UPDATE communications
+                SET status = 'clicked',
+                    clicked_at = COALESCE(clicked_at, CURRENT_TIMESTAMP),
+                    opened_at = COALESCE(opened_at, CURRENT_TIMESTAMP),
+                    delivered_at = COALESCE(delivered_at, CURRENT_TIMESTAMP),
+                    sent_at = COALESCE(sent_at, CURRENT_TIMESTAMP)
+                WHERE campaign_id = $1 AND customer_id = $2
+                """,
                 payload.campaign_id, payload.customer_id
             )
         else:
